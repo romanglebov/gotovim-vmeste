@@ -168,11 +168,12 @@ test('«Другое дело» возвращает прежний шаг ос�
   assert.ok(options(st, ctx, 1).steps.some(s => s.id === was), 'прежний шаг снова свободен');
 });
 
-test('шаги, которые идут сами (суп варится), достаются повару как обычные', () => {
-  const { st, ctx } = started(recipes.find(r => r.id === 'pasta_tomato'));
-  const ci = st.cooks.findIndex(c => c.task.id === 'fill_pot');
-  apply(st, ctx, { pid: st.cooks[ci].pid, type: 'done', id: 'fill_pot' }, 2);
-  assert.equal(st.cooks[ci].task.id, 'wait_boil');
+test('в рецептах только шаги готовки: ни ожиданий, ни дел вроде «помыть посуду»', () => {
+  for (const r of recipes) assert.equal(r.fallback_tasks.length, 0, `${r.id}: fallback_tasks`);
+  for (const r of recipes) for (const s of r.steps) {
+    assert.equal(s.kind, undefined, `${r.id}/${s.id}: kind`);
+    assert.ok(!/^(Ждём|Дождаться|Вода закипает|Паста варится|Суп кипит)/.test(s.title), `${r.id}/${s.id}: ${s.title}`);
+  }
 });
 
 test('накрыть на стол предлагается последним', () => {
