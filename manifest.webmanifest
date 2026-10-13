@@ -3,7 +3,7 @@
   "short_name": "Готовим",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#EEF2EC",
-  "theme_color": "#1E6A50",
+  "background_color": "#F4F2EC",
+  "theme_color": "#FFD200",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
 }
