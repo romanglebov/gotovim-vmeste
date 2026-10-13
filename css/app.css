@@ -1,16 +1,17 @@
 /* One phone screen: a narrow column, content top to bottom, the one main button at the bottom.
-   Green is kept for the main action only; everything else is ink, grey and white. */
+   Budapest tram yellow (villamos sárga) is kept for the main action only; the rest is warm white and grey.
+   Every tile in the app is a square of the same size: three to a row. */
 :root{
-  --bg:#EEF2EC; --surface:#FFFFFF; --sunk:#E5EAE4; --ink:#18261F; --muted:#5B6B62; --line:#D3DCD4;
-  --accent:#1E6A50; --accent-ink:#FFFFFF; --accent-soft:#DCEDE5; --note:#F7EED3; --note-ink:#6A4B07; --danger:#A33A2A;
-  --c1:#1E6A50; --c2:#B4601C; --c3:#6A4A9C; --c4:#2F5F8F;
+  --bg:#F4F2EC; --surface:#FFFFFF; --sunk:#ECE9E1; --ink:#1D1B16; --muted:#6E6A60; --line:#DEDAD0;
+  --accent:#FFD200; --accent-ink:#1D1B16; --accent-soft:#FFF4BF; --note:#FFF4BF; --note-ink:#5C4500; --danger:#B3261E;
+  --c1:#1F5FA8; --c2:#D9480F; --c3:#7C3AED; --c4:#BE185D;
   --f-display:"Unbounded","Rubik",system-ui,sans-serif; --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#0F1612; --surface:#17211C; --sunk:#1F2B25; --ink:#E4EDE7; --muted:#97A99F; --line:#2B3A32;
-  --accent:#53B48D; --accent-ink:#08130E; --accent-soft:#1D3A2E; --note:#2C2614; --note-ink:#EBC867; --danger:#E77B67;
-  --c1:#53B48D; --c2:#E39152; --c3:#AC8DDD; --c4:#6FA6DA; color-scheme:dark}}
+  --bg:#151412; --surface:#1F1D1A; --sunk:#2A2723; --ink:#EEEAE2; --muted:#A39E93; --line:#36322C;
+  --accent:#FFD200; --accent-ink:#1D1B16; --accent-soft:#3A3212; --note:#3A3212; --note-ink:#FFE27A; --danger:#F28B82;
+  --c1:#6EA8FF; --c2:#FF8A4C; --c3:#B39DFF; --c4:#F472B6; color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
 body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body);-webkit-tap-highlight-color:transparent;
@@ -26,7 +27,7 @@ p{margin:0}
 .err{color:var(--danger);font-size:.9rem}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 button{font:inherit}
-button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
 /* buttons */
 .big{width:100%;font:600 1.2rem var(--f-body);padding:19px;border-radius:16px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;margin-top:auto}
@@ -34,8 +35,6 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 .big.secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:500}
 .ghost{font:500 .95rem var(--f-body);padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .linkish{align-self:center;border:0;background:none;color:var(--muted);font:500 .95rem var(--f-body);text-decoration:underline;text-underline-offset:3px;padding:8px 10px;cursor:pointer}
-.linkish.small{font-size:.82rem}
-#stopbox{text-align:center}
 .back{align-self:flex-start;border:0;background:none;color:var(--muted);font:500 .95rem var(--f-body);padding:6px 2px;margin:-4px 0 -6px;cursor:pointer}
 .stack{display:flex;flex-direction:column;gap:6px;margin-top:auto}
 .stack .big{margin-top:0}
@@ -55,62 +54,50 @@ input.code{font:700 1.6rem var(--f-display);letter-spacing:.25em;text-transform:
 .wait{margin-top:auto;text-align:center;padding-bottom:8px}
 .bar{height:4px;border-radius:2px;background:var(--sunk);overflow:hidden;flex:none}.bar i{display:block;height:100%;background:var(--muted);transition:width .4s}
 
-/* recipe book */
-.dish,.chosen{font:inherit;color:var(--ink);text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;min-width:0}
-.pic{aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;background:var(--sunk);overflow:hidden}
+/* home and lobby */
+.chosen{font:inherit;color:var(--ink);text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;min-width:0}
+.pic{display:grid;place-items:center;background:var(--sunk);overflow:hidden}
 .chosen .pic,.hero .pic{aspect-ratio:16/9}
 .pic img{width:100%;height:100%;object-fit:cover;display:block}
 .pic .emo{font-size:2.6rem;line-height:1}
-.dish .dt{padding:9px 11px 11px}
-.dish .dt b{font-weight:600;font-size:.98rem;line-height:1.25;text-wrap:balance}
 .chosen .ct{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
 .chosen .ct b{font:700 1.1rem/1.25 var(--f-display)}
 .chev{font-size:1.6rem;line-height:1;color:var(--muted)}
-.dish[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
-.book{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .hero{border-radius:16px;overflow:hidden;line-height:0}
-
-/* lobby */
 .qr{background:#fff;padding:10px;border-radius:14px;line-height:0}
 .qr svg{width:220px;height:220px;display:block}
 .code{font:700 1.6rem var(--f-display);letter-spacing:.22em;text-align:center}
 
-/* "you will need" tiles */
+/* tiles: recipe book, "you will need", what else to do. All the same square. */
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.tile{position:relative;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;cursor:pointer;min-width:0}
-.tile .tp{font-size:1.9rem;line-height:1;height:2.3rem;display:grid;place-items:center}
-.tile .tp img{max-width:100%;height:2.3rem;object-fit:contain}
-.tile .nm{font-size:.78rem;line-height:1.2;overflow-wrap:anywhere}
-.tile .q{font-size:.74rem;color:var(--muted)}
+.tile{position:relative;aspect-ratio:1;min-width:0;overflow:hidden;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 5px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;cursor:pointer}
+.tile .tp{font-size:1.6rem;line-height:1;height:1.8rem;display:grid;place-items:center;flex:none}
+.tile .tp img{max-width:100%;height:1.8rem;object-fit:contain}
+.tile .nm,.tile b{font-size:.72rem;line-height:1.15;overflow-wrap:break-word;hyphens:auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.tile .q{font-size:.7rem;line-height:1.2;color:var(--muted)}
 .tile.ok{border-color:var(--accent);background:var(--accent-soft)}
 .tile.ok .tp{opacity:.5}
-.tile .tick{position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:.7rem;font-weight:600;display:grid;place-items:center}
+.tile .tick{position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:.7rem;font-weight:700;display:grid;place-items:center}
+.tile.dish{padding:0;justify-content:flex-start;gap:0}
+.tile.dish .pic{width:100%;flex:1;min-height:0}
+.tile.dish b{margin:6px 6px 7px;font-size:.76rem;font-weight:600;-webkit-line-clamp:2;flex:none}
+.tile.dish[aria-pressed="true"]{border:2px solid var(--ink)}
+.tile.opt{background:var(--bg)}
+.tile.opt b{font-size:.84rem;line-height:1.2;font-weight:600;-webkit-line-clamp:4}
+.tile.opt span{font-size:.72rem;color:var(--muted)}
 
-/* cooking */
-.clock{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--note);color:var(--note-ink);border-radius:14px;padding:10px 12px;font-size:.9rem}
-.clock span{display:flex;flex-direction:column;gap:1px;min-width:0}
-.clock small{font-size:.82rem;opacity:.9}
-.clock button{font:600 .9rem var(--f-body);padding:10px 14px;border-radius:10px;border:1.5px solid currentColor;background:transparent;color:inherit;cursor:pointer;white-space:nowrap}
-.step{gap:12px;touch-action:pan-y}
-.steptop{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin:-8px -8px 0}
-.nav{width:44px;height:44px;border:0;border-radius:50%;background:none;color:var(--muted);font-size:1.7rem;line-height:1;cursor:pointer}
-.nav:disabled{opacity:.25;cursor:default}
-.post{text-align:center;font-size:.85rem;color:var(--muted)}
+/* cooking: the instruction with "previous" and "next" along its sides */
+.step{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;padding:18px 0;gap:0;touch-action:pan-y}
+.inst{display:flex;flex-direction:column;gap:10px;padding:0 4px}
+.nav{align-self:stretch;width:40px;border:0;background:none;color:var(--muted);font-size:1.8rem;line-height:1;cursor:pointer;padding:0}
+.nav:disabled{opacity:.2;cursor:default}
 .note{font-size:.88rem;color:var(--muted)}
 .step h2{font-size:1.45rem}
 .desc{font-size:1.18rem;line-height:1.55}
-.when{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;font-size:1.02rem;line-height:1.45}
-.when b{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
-.when small{color:var(--muted);font-size:.85rem}
 .stat-line{font-size:.92rem;color:var(--muted)}
-.undo{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.92rem;color:var(--muted);margin-bottom:-6px}
-.undo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.undo + .big{margin-top:0}
-.undo .linkish{color:var(--ink);padding:6px 0;flex:none}
-.opts{display:flex;flex-direction:column;gap:8px}
-.opt{text-align:left;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
-.opt b{font-weight:600}
-.opt span{font-size:.82rem;color:var(--muted)}
+.foot{margin-top:auto;display:flex;flex-direction:column;gap:12px}
+.foot .big{margin-top:0}
 
 /* the end */
 .summary{font-size:1.1rem;line-height:1.6}
