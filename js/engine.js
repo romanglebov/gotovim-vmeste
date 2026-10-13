@@ -22,7 +22,7 @@ export function validate(r) {
     ids.add(s.id);
   }
   for (const s of r.steps) {
-    s.depends_on = s.depends_on || []; s.resources = s.resources || []; s.kind = s.kind || 'active';
+    s.depends_on = s.depends_on || []; s.resources = s.resources || [];
     for (const d of s.depends_on) if (!ids.has(d)) throw `шаг «${s.id}» зависит от несуществующего шага «${d}».`;
     for (const x of s.resources) if (!eq.has(x)) throw `шаг «${s.id}» использует «${x}», которого нет в инвентаре.`;
     if (s.station && !STATIONS[s.station]) throw `у шага «${s.id}» неизвестный пост «${s.station}». Посты: ${Object.keys(STATIONS).join(', ')}.`;
@@ -152,7 +152,6 @@ function log(st, e, now) {
 
 // A free cook gets the best next step at once, so the phone always shows one step and one button.
 // The cook who has just finished goes first: the continuation of their own work stays theirs.
-// Steps that go on by themselves (soup simmers) are ordinary steps too: the cook presses "Готово" when it is ready.
 function schedule(st, ctx, now, first = -1) {
   st.cooks.forEach(c => { if (!c.task) c.task = { type: 'choose', start: now }; });
   const order = st.cooks.map((_, i) => i).sort((a, b) => (b === first) - (a === first));
