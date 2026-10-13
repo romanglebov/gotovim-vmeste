@@ -128,12 +128,12 @@
   "fallback_tasks": [
     {
       "id": "wash_dishes",
-      "title": "Помыть освободившуюся посуду",
+      "title": "Помыть грязную посуду",
       "technique": "wash_dishes"
     },
     {
       "id": "wipe_surfaces",
-      "title": "Протереть стол и разделочную зону",
+      "title": "Протереть стол",
       "technique": "wipe_surfaces"
     }
   ],
