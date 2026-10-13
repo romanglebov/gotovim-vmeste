@@ -49,8 +49,8 @@ async function playGame(title, reloadMidway) {
   await guest.locator('#name').waitFor({ timeout: 15000 });
   await guest.fill('#name', 'Алёна');
   await guest.click('[data-act="join"]');
-  await host.locator('.people li', { hasText: 'Алёна' }).waitFor({ timeout: 10000 });
-  await guest.locator('text=Ждём, пока ведущий начнёт').waitFor({ timeout: 10000 });
+  await host.locator('.names', { hasText: 'Алёна' }).waitFor({ timeout: 10000 });
+  await guest.locator('text=Ждём, пока Рома начнёт').waitFor({ timeout: 10000 });
 
   await host.click('[data-act="toEquip"]');
   await guest.locator('text=Вам понадобятся').waitFor({ timeout: 10000 });
@@ -70,6 +70,12 @@ async function playGame(title, reloadMidway) {
   await host.locator('[data-act="mine"]').click();
   if ((await host.locator('#deck h2').innerText()) !== myTitle) errors.push(`${title}: «К моему шагу» не вернул к своему шагу`);
 
+  // "Готово" pressed by mistake is taken back with "Отменить".
+  await host.click('[data-act="done"]');
+  await host.locator('[data-act="undo"]').click({ timeout: 5000 });
+  await sleep(300);
+  if ((await host.locator('#deck h2').innerText()) !== myTitle) errors.push(`${title}: «Отменить» не вернул шаг`);
+
   const phones = [host, guest];
   const start = Date.now();
   let reloaded = false, actions = 0;
@@ -79,11 +85,11 @@ async function playGame(title, reloadMidway) {
     if (reloadMidway && !reloaded && actions > 12) {
       reloaded = true;
       await Promise.all(phones.map(p => p.reload()));
-      await Promise.all(phones.map(p => p.locator('.status .dot.online').waitFor({ timeout: 15000 })));
+      await Promise.all(phones.map(p => p.locator('body[data-net="online"]').waitFor({ timeout: 15000 })));
     }
     let acted = false;
     for (const p of phones) {
-      for (const sel of ['button[data-act="done"]:not([disabled])', 'button.big[data-act="take"]:not([disabled])', '[data-act="bgdone"]', '.opt']) {
+      for (const sel of ['button[data-act="done"]:not([disabled])', '[data-act="bgdone"]', '.opt']) {
         const el = p.locator(sel).first();
         if (await el.count() && await el.isVisible().catch(() => false)) {
           await el.click({ timeout: 2000 }).catch(() => {});
@@ -96,9 +102,8 @@ async function playGame(title, reloadMidway) {
     if (!acted) await sleep(500);
   }
   const ok = (await text(host)).includes('Приятного аппетита') && (await text(guest)).includes('Приятного аппетита');
-  const stepsDone = ok ? await host.locator('.stats .stat b').nth(0).innerText() : '-';
   await host.context().close(); await guest.context().close();
-  return { title, ok, code, actions, seconds: Math.round((Date.now() - start) / 1000), total: stepsDone, reloaded };
+  return { title, ok, code, actions, seconds: Math.round((Date.now() - start) / 1000), reloaded };
 }
 
 let results;
