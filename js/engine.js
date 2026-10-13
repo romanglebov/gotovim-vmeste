@@ -99,7 +99,7 @@ export function avail(st, ctx) {
     .sort((a, b) => ctx.desc[b.id].size - ctx.desc[a.id].size);
 }
 
-/** What a cook may pick right now. Nothing is reserved until they pick. */
+/** What a cook may switch to right now ("Другое дело"), best first. Steps already taken are not offered. */
 export function options(st, ctx, ci) {
   const c = st.cooks[ci];
   const steps = avail(st, ctx).filter(s => !isBg(s));
@@ -154,13 +154,24 @@ function log(st, e, now) {
 
 // Steps that run by themselves (soup simmers, water boils) go to the shared stove strip.
 // Nothing ends by a clock: any cook presses "Готово" when the cue in `done_when` is there.
-function schedule(st, ctx, now) {
+// A free cook gets the best next step at once, so the phone always shows one step and one button.
+// The cook who has just finished goes first: the continuation of their own work stays theirs.
+function schedule(st, ctx, now, first = -1) {
   for (let g = 0; g < 50; g++) {
     const b = avail(st, ctx).find(isBg);
     if (!b) break;
     st.bg[b.id] = { start: now };
   }
   st.cooks.forEach(c => { if (!c.task) c.task = { type: 'choose', start: now }; });
+  const order = st.cooks.map((_, i) => i).sort((a, b) => (b === first) - (a === first));
+  for (const i of order) {
+    const c = st.cooks[i];
+    if (c.task.type !== 'choose') continue;
+    const s = options(st, ctx, i).steps[0];
+    if (!s) continue;
+    if (now > c.task.start) log(st, { type: 'wait', id: 'wait', cook: i, start: c.task.start }, now);
+    c.task = { type: 'step', id: s.id, start: now };
+  }
   if (ctx.R.steps.every(s => st.done[s.id])) finish(st, now);
 }
 
@@ -224,16 +235,17 @@ function applyInner(st, ctx, a, now) {
       return { ok: true };
     }
     case 'take': {
+      // Taking another step, help or small task. A step the cook had goes back to the others.
       if (st.phase !== 'cook' || ci < 0) return { ok: false };
       const c = st.cooks[ci];
-      if (!c.task || c.task.type !== 'choose') return { ok: false };
+      if (!c.task) return { ok: false };
       const o = options(st, ctx, ci);
       let task = null;
       if (a.kind === 'step' && o.steps.some(s => s.id === a.id)) task = { type: 'step', id: a.id, start: now };
       if (a.kind === 'help') { const h = o.helps.find(h => h.id === a.id); if (h) task = { type: 'help', id: a.id, of: a.id, host: h.host, start: now }; }
       if (a.kind === 'fallback' && o.fbs.some(f => f.id === a.id)) task = { type: 'fallback', id: a.id, start: now };
       if (!task) return { ok: false, err: 'Это уже взял кто-то другой.' };
-      log(st, { type: 'wait', id: 'wait', cook: ci, start: c.task.start }, now);
+      if (c.task.type === 'choose' && now > c.task.start) log(st, { type: 'wait', id: 'wait', cook: ci, start: c.task.start }, now);
       c.task = task;
       schedule(st, ctx, now);
       return { ok: true };
@@ -244,6 +256,8 @@ function applyInner(st, ctx, a, now) {
       if (!t || t.type === 'choose') return { ok: false };
       if (a.id && t.id !== a.id) return { ok: false };
       log(st, { ...t, cook: ci }, now);
+      // Remembered so that a "Готово" pressed by mistake can be taken back.
+      c.prev = t.type === 'step' ? { id: t.id, start: t.start, last: c.last } : null;
       if (t.type === 'step' || t.type === 'help') c.last = t.id;
       if (t.type === 'step') {
         st.done[t.id] = true;
@@ -253,6 +267,30 @@ function applyInner(st, ctx, a, now) {
       }
       if (t.type === 'fallback') st.fb[t.id] = true;
       c.task = null;
+      schedule(st, ctx, now, ci);
+      return { ok: true };
+    }
+    case 'undo': {
+      // "Готово" pressed by mistake: the step comes back to this cook, as long as nothing after it has started.
+      if (st.phase !== 'cook' || ci < 0) return { ok: false };
+      const c = st.cooks[ci], p = c.prev;
+      if (!p || p.id !== a.id || !st.done[p.id]) return { ok: false, err: 'Этот шаг уже не отменить.' };
+      const deps = ctx.R.steps.filter(s => s.depends_on.includes(p.id));
+      if (deps.some(s => st.done[s.id] || st.cooks.some((o, j) => j !== ci && o.task && o.task.type === 'step' && o.task.id === s.id)))
+        return { ok: false, err: 'Уже не отменить: следующий шаг начат.' };
+      const saved = { task: c.task, bg: {} };
+      c.task = null;
+      for (const s of deps) if (st.bg[s.id]) { saved.bg[s.id] = st.bg[s.id]; delete st.bg[s.id]; }
+      const u = usage(st, ctx);
+      if (!ctx.S[p.id].resources.every(r => (u[r] || 0) + 1 <= (ctx.CAP[r] || 1))) {
+        c.task = saved.task; Object.assign(st.bg, saved.bg);
+        return { ok: false, err: 'Уже не отменить: инвентарь занят.' };
+      }
+      delete st.done[p.id];
+      const li = st.log.findLastIndex(e => e.type === 'step' && e.id === p.id && e.cook === ci);
+      if (li >= 0) st.log.splice(li, 1);
+      c.task = { type: 'step', id: p.id, start: p.start };
+      c.last = p.last; c.prev = null;
       schedule(st, ctx, now);
       return { ok: true };
     }
