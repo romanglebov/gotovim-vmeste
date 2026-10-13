@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "id": "mushroom_cream_soup",
-  "version": 4,
+  "version": 5,
   "title": "Грибной крем-суп",
   "image": "images/mushroom_soup.svg",
   "icon": "🍲",
@@ -187,18 +187,6 @@
       "icon": "🌿"
     }
   ],
-  "fallback_tasks": [
-    {
-      "id": "wash_dishes",
-      "title": "Помыть грязную посуду",
-      "technique": "wash_dishes"
-    },
-    {
-      "id": "wipe_surfaces",
-      "title": "Протереть стол",
-      "technique": "wipe_surfaces"
-    }
-  ],
   "steps": [
     {
       "id": "weigh_mushrooms",
@@ -212,7 +200,6 @@
         "scales",
         "bowl"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -227,7 +214,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -242,7 +228,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -259,7 +244,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -273,7 +257,6 @@
       "resources": [
         "peeler"
       ],
-      "kind": "active",
       "help": {
         "type": "split",
         "text": "Почистите вторую картофелину ножом."
@@ -294,7 +277,6 @@
         "knife",
         "bowl"
       ],
-      "kind": "active",
       "help": {
         "type": "split",
         "text": "Нарежьте одну картофелину на второй доске."
@@ -309,7 +291,6 @@
       "technique": "wash_herbs",
       "depends_on": [],
       "resources": [],
-      "kind": "active",
       "optional_ingredient": "parsley",
       "help": null
     },
@@ -328,7 +309,6 @@
         "knife",
         "towels"
       ],
-      "kind": "active",
       "optional_ingredient": "parsley",
       "help": null
     },
@@ -343,7 +323,6 @@
       "resources": [
         "kettle"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -360,7 +339,6 @@
         "pot",
         "stove"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -379,7 +357,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -398,7 +375,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -415,7 +391,6 @@
       "resources": [
         "kettle"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -434,7 +409,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -452,7 +426,6 @@
         "pot",
         "kettle"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -469,7 +442,6 @@
         "pot",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -486,92 +458,40 @@
       "resources": [
         "colander"
       ],
-      "kind": "active",
       "help": null
     },
     {
-      "id": "add_potatoes",
-      "title": "Добавить картофель и тимьян",
+      "id": "cook_soup",
+      "title": "Сварить суп с картофелем",
       "station": "stove",
       "item": "суп",
-      "description": "Переложите картофель в кастрюлю, добавьте 2 щепотки тимьяна и перемешайте.",
-      "technique": "add_to_pot",
+      "description": "Переложите картофель в кастрюлю, добавьте 2 щепотки тимьяна и перемешайте. Доведите до кипения, убавьте огонь до слабого, накройте крышкой и варите 15–20 минут, пока кусочек картофеля не будет легко протыкаться ножом и разваливаться.",
+      "technique": "simmer_covered",
       "depends_on": [
         "dissolve_cube",
         "drain_potatoes"
       ],
       "resources": [
         "pot",
-        "spatula"
-      ],
-      "kind": "active",
-      "help": null
-    },
-    {
-      "id": "bring_to_boil",
-      "title": "Довести до кипения",
-      "station": "stove",
-      "item": "суп",
-      "description": "Дождитесь, пока суп закипит по всей поверхности, обычно 3–5 минут. Затем убавьте огонь до слабого и накройте крышкой.",
-      "technique": "bring_to_boil",
-      "depends_on": [
-        "add_potatoes"
-      ],
-      "resources": [
-        "pot",
+        "spatula",
         "stove"
       ],
-      "kind": "waiting",
-      "help": null
-    },
-    {
-      "id": "simmer",
-      "title": "Варить",
-      "station": "stove",
-      "item": "суп",
-      "description": "Варите под крышкой при лёгком бульканье 15–20 минут. Суп готов, когда кусочек картофеля легко протыкается ножом и разваливается.",
-      "technique": "simmer_covered",
-      "depends_on": [
-        "bring_to_boil"
-      ],
-      "resources": [
-        "pot",
-        "stove"
-      ],
-      "kind": "waiting",
-      "help": null
-    },
-    {
-      "id": "rest_off_heat",
-      "title": "Снять с огня",
-      "station": "stove",
-      "item": "суп",
-      "description": "Снимите кастрюлю с огня и дайте постоять 2–3 минуты, пока суп не перестанет бурлить. Так он меньше брызгает при пюрировании.",
-      "technique": "remove_from_heat",
-      "depends_on": [
-        "simmer"
-      ],
-      "resources": [
-        "pot"
-      ],
-      "kind": "waiting",
       "help": null
     },
     {
       "id": "blend",
-      "title": "Пюрировать",
+      "title": "Пюрировать суп блендером",
       "station": "appliance",
       "item": "суп",
-      "description": "Опустите блендер до дна и только потом включайте. Пробивайте, медленно водя по кастрюле, пока суп не станет однородным.",
+      "description": "Снимите кастрюлю с огня и дайте постоять 2–3 минуты, чтобы суп меньше брызгал. Опустите блендер до дна и только потом включайте. Пробивайте, медленно водя по кастрюле, пока суп не станет однородным.",
       "technique": "immersion_blend",
       "depends_on": [
-        "rest_off_heat"
+        "cook_soup"
       ],
       "resources": [
         "pot",
         "blender"
       ],
-      "kind": "active",
       "help": {
         "type": "assist",
         "text": "Придержите кастрюлю за ручки, чтобы не ездила."
@@ -592,7 +512,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -610,7 +529,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -626,7 +544,6 @@
       "resources": [
         "pot"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -640,7 +557,6 @@
       "resources": [
         "bowl"
       ],
-      "kind": "active",
       "late": true,
       "help": {
         "type": "split",
@@ -662,7 +578,6 @@
       "resources": [
         "ladle"
       ],
-      "kind": "active",
       "help": {
         "type": "split",
         "text": "Посыпьте тарелки сухариками и петрушкой."

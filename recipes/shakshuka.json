@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "id": "shakshuka",
-  "version": 3,
+  "version": 4,
   "title": "Шакшука",
   "image": "images/shakshuka.svg",
   "icon": "🍳",
@@ -175,18 +175,6 @@
       "icon": "🍞"
     }
   ],
-  "fallback_tasks": [
-    {
-      "id": "wash_dishes",
-      "title": "Помыть грязную посуду",
-      "technique": "wash_dishes"
-    },
-    {
-      "id": "wipe_surfaces",
-      "title": "Протереть стол",
-      "technique": "wipe_surfaces"
-    }
-  ],
   "steps": [
     {
       "id": "dice_onion",
@@ -200,7 +188,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -212,7 +199,6 @@
       "technique": "wash_vegetables",
       "depends_on": [],
       "resources": [],
-      "kind": "active",
       "help": null
     },
     {
@@ -229,7 +215,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -246,7 +231,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": {
         "type": "split",
         "text": "Нарежьте вторую половинку перца на другой доске."
@@ -264,7 +248,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -281,7 +264,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -295,7 +277,6 @@
       "resources": [
         "dish"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -309,7 +290,6 @@
       "resources": [
         "opener"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -323,7 +303,6 @@
       "resources": [
         "cups"
       ],
-      "kind": "active",
       "help": {
         "type": "split",
         "text": "Разбейте два яйца из четырёх."
@@ -338,7 +317,6 @@
       "technique": "wash_herbs",
       "depends_on": [],
       "resources": [],
-      "kind": "active",
       "help": null
     },
     {
@@ -355,7 +333,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -367,7 +344,6 @@
       "technique": "crumble_cheese",
       "depends_on": [],
       "resources": [],
-      "kind": "active",
       "optional_ingredient": "feta",
       "help": null
     },
@@ -385,7 +361,6 @@
         "pan",
         "stove"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -403,7 +378,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -422,7 +396,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -442,7 +415,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -460,16 +432,15 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
-      "id": "add_tomatoes",
-      "title": "Влить томаты",
+      "id": "simmer_sauce",
+      "title": "Потушить томатный соус",
       "station": "stove",
       "item": "соус",
-      "description": "Вылейте томаты в сковороду, разомните их лопаткой. Добавьте ½ ч. л. соли и щепотку чёрного перца, перемешайте.",
-      "technique": "crush_tomatoes",
+      "description": "Вылейте томаты в сковороду и разомните их лопаткой. Добавьте ½ ч. л. соли и щепотку чёрного перца, перемешайте. Тушите на слабо-среднем огне без крышки 8–12 минут, пока соус не загустеет: ложка оставляет след, который не сразу заплывает.",
+      "technique": "simmer_uncovered",
       "depends_on": [
         "add_paste",
         "open_tomatoes"
@@ -479,24 +450,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
-      "help": null
-    },
-    {
-      "id": "simmer_sauce",
-      "title": "Соус уваривается",
-      "station": "stove",
-      "item": "соус",
-      "description": "Тушите соус на слабо-среднем огне без крышки 8–12 минут. Он готов, когда ложка оставляет след, который не сразу заплывает.",
-      "technique": "simmer_uncovered",
-      "depends_on": [
-        "add_tomatoes"
-      ],
-      "resources": [
-        "pan",
-        "stove"
-      ],
-      "kind": "waiting",
       "help": null
     },
     {
@@ -513,7 +466,6 @@
         "pan",
         "spoon"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -531,16 +483,15 @@
         "stove",
         "spoon"
       ],
-      "kind": "active",
       "help": null
     },
     {
-      "id": "add_eggs",
-      "title": "Выложить яйца",
+      "id": "cook_eggs",
+      "title": "Приготовить яйца в соусе",
       "station": "stove",
       "item": "яйца",
-      "description": "Аккуратно вылейте по одному яйцу из чашки в каждое углубление, стараясь не повредить желток.",
-      "technique": "slide_egg",
+      "description": "Аккуратно вылейте по одному яйцу из чашки в каждое углубление, не повредив желток. Накройте сковороду крышкой и готовьте на слабом огне 5–8 минут, пока белок не станет полностью белым даже у самого желтка, а желток будет блестеть и колыхаться, если качнуть сковороду.",
+      "technique": "cook_covered",
       "depends_on": [
         "make_wells",
         "crack_eggs"
@@ -549,24 +500,6 @@
         "pan",
         "stove"
       ],
-      "kind": "active",
-      "help": null
-    },
-    {
-      "id": "cook_eggs",
-      "title": "Яйца готовятся под крышкой",
-      "station": "stove",
-      "item": "яйца",
-      "description": "Накройте сковороду крышкой и готовьте на слабом огне 5–8 минут. Яйца готовы, когда белок полностью белый даже у самого желтка, а желток блестит и колышется, если качнуть сковороду.",
-      "technique": "cook_covered",
-      "depends_on": [
-        "add_eggs"
-      ],
-      "resources": [
-        "pan",
-        "stove"
-      ],
-      "kind": "waiting",
       "help": null
     },
     {
@@ -581,7 +514,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "late": true,
       "help": null
     },
@@ -596,7 +528,6 @@
         "slice_bread"
       ],
       "resources": [],
-      "kind": "active",
       "late": true,
       "help": null
     },
@@ -616,7 +547,6 @@
       "resources": [
         "pan"
       ],
-      "kind": "active",
       "help": null
     }
   ]

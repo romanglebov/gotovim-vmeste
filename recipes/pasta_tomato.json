@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "id": "pasta_tomato",
-  "version": 4,
+  "version": 5,
   "title": "Паста с томатным соусом",
   "image": "images/pasta_tomato.svg",
   "icon": "🍝",
@@ -125,49 +125,19 @@
       "icon": "🌿"
     }
   ],
-  "fallback_tasks": [
-    {
-      "id": "wash_dishes",
-      "title": "Помыть грязную посуду",
-      "technique": "wash_dishes"
-    },
-    {
-      "id": "wipe_surfaces",
-      "title": "Протереть стол",
-      "technique": "wipe_surfaces"
-    }
-  ],
   "steps": [
     {
-      "id": "fill_pot",
-      "title": "Поставить кастрюлю с водой",
+      "id": "boil_water",
+      "title": "Вскипятить 3 литра воды",
       "station": "stove",
       "item": "вода",
-      "description": "Налейте в большую кастрюлю 3 л воды, накройте крышкой и поставьте на сильный огонь. Вода для пасты закипает долго, поэтому её ставят первой, пока готовится соус.",
-      "technique": "fill_pot",
+      "description": "Налейте в большую кастрюлю 3 л воды, накройте крышкой и поставьте на сильный огонь. Вода для пасты закипает долго, поэтому её ставят первой.",
+      "technique": "bring_to_boil",
       "depends_on": [],
       "resources": [
         "pot",
         "stove"
       ],
-      "kind": "active",
-      "help": null
-    },
-    {
-      "id": "wait_boil",
-      "title": "Вода закипает",
-      "station": "stove",
-      "item": "вода",
-      "description": "Дождитесь, пока вода бурно закипит: пузыри по всей поверхности. Обычно это 8–12 минут.",
-      "technique": "bring_to_boil",
-      "depends_on": [
-        "fill_pot"
-      ],
-      "resources": [
-        "pot",
-        "stove"
-      ],
-      "kind": "waiting",
       "help": null
     },
     {
@@ -182,7 +152,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -199,7 +168,6 @@
         "board",
         "knife"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -213,7 +181,6 @@
       "resources": [
         "grater"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -225,7 +192,6 @@
       "technique": "wash_herbs",
       "depends_on": [],
       "resources": [],
-      "kind": "active",
       "optional_ingredient": "basil",
       "help": null
     },
@@ -243,7 +209,6 @@
         "pan",
         "stove"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -261,16 +226,15 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
-      "id": "add_tomatoes",
-      "title": "Добавить томаты",
+      "id": "simmer_sauce",
+      "title": "Потушить томатный соус",
       "station": "stove",
       "item": "соус",
-      "description": "Вылейте томаты в сковороду, добавьте щепотку сахара и щепотку соли. Разомните помидоры лопаткой.",
-      "technique": "crush_tomatoes",
+      "description": "Вылейте томаты в сковороду, добавьте щепотку сахара и щепотку соли, разомните помидоры лопаткой. Тушите на слабом огне без крышки 10–15 минут, иногда помешивая, пока соус не загустеет: ложка оставляет на дне след, который не сразу заплывает.",
+      "technique": "simmer_uncovered",
       "depends_on": [
         "fry_garlic"
       ],
@@ -279,58 +243,22 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
-      "help": null
-    },
-    {
-      "id": "simmer_sauce",
-      "title": "Соус томится",
-      "station": "stove",
-      "item": "соус",
-      "description": "Тушите соус на слабом огне без крышки 10–15 минут, иногда помешивая. Он готов, когда ложка оставляет на дне след, который не сразу заплывает.",
-      "technique": "simmer_uncovered",
-      "depends_on": [
-        "add_tomatoes"
-      ],
-      "resources": [
-        "pan",
-        "stove"
-      ],
-      "kind": "waiting",
-      "help": null
-    },
-    {
-      "id": "add_pasta",
-      "title": "Заложить пасту",
-      "station": "stove",
-      "item": "паста",
-      "description": "Посолите кипящую воду (1 ст. л.), заложите спагетти и перемешайте, чтобы не слиплись.",
-      "technique": "add_pasta",
-      "depends_on": [
-        "wait_boil"
-      ],
-      "resources": [
-        "pot",
-        "stove"
-      ],
-      "kind": "active",
       "help": null
     },
     {
       "id": "cook_pasta",
-      "title": "Паста варится",
+      "title": "Сварить спагетти",
       "station": "stove",
       "item": "паста",
-      "description": "Варите спагетти при сильном кипении, иногда помешивая, 8–10 минут. Попробуйте одну: готовые мягкие, но в середине чуть упругие. Время на пачке — хороший ориентир.",
+      "description": "Когда вода бурно закипит, посолите её (1 ст. л.), заложите спагетти и перемешайте, чтобы не слиплись. Варите при сильном кипении 8–10 минут, иногда помешивая. Попробуйте одну: готовые мягкие, но в середине чуть упругие. Время на пачке — хороший ориентир.",
       "technique": "boil_pasta",
       "depends_on": [
-        "add_pasta"
+        "boil_water"
       ],
       "resources": [
         "pot",
         "stove"
       ],
-      "kind": "waiting",
       "help": null
     },
     {
@@ -348,7 +276,6 @@
         "colander",
         "mug"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -367,7 +294,6 @@
         "stove",
         "spatula"
       ],
-      "kind": "active",
       "help": null
     },
     {
@@ -379,7 +305,6 @@
       "technique": "set_table",
       "depends_on": [],
       "resources": [],
-      "kind": "active",
       "late": true,
       "help": null
     },
@@ -397,7 +322,6 @@
         "prep_basil"
       ],
       "resources": [],
-      "kind": "active",
       "help": {
         "type": "split",
         "text": "Посыпьте тарелки сыром и базиликом."
