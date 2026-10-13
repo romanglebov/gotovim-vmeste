@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+<rect width="240" height="180" fill="#3D5566"/>
+<g fill="#C7CCD0" transform="rotate(-8 200 92)"><rect x="196" y="70" width="7" height="96" rx="3.5"/><rect x="190" y="22" width="19" height="52" rx="5"/><rect x="192" y="10" width="3" height="20" rx="1.5"/><rect x="197.5" y="10" width="3" height="20" rx="1.5"/><rect x="203" y="10" width="3" height="20" rx="1.5"/></g>
+<circle cx="98" cy="92" r="76" fill="#F2F1EC"/>
+<circle cx="98" cy="92" r="60" fill="none" stroke="#E0DED6" stroke-width="2"/>
+<g fill="none" stroke="#E5C062" stroke-width="3.2" stroke-linecap="round">
+<ellipse cx="98" cy="92" rx="46" ry="32"/><ellipse cx="96" cy="94" rx="40" ry="34" transform="rotate(35 96 94)"/>
+<ellipse cx="100" cy="90" rx="44" ry="28" transform="rotate(-30 100 90)"/><ellipse cx="98" cy="92" rx="36" ry="30" transform="rotate(70 98 92)"/>
+<ellipse cx="94" cy="96" rx="42" ry="24" transform="rotate(110 94 96)"/><ellipse cx="102" cy="88" rx="30" ry="22" transform="rotate(15 102 88)"/>
+<ellipse cx="98" cy="92" rx="48" ry="20" transform="rotate(150 98 92)"/></g>
+<g fill="none" stroke="#D3AC4C" stroke-width="2.4"><ellipse cx="98" cy="92" rx="38" ry="26" transform="rotate(55 98 92)"/><ellipse cx="98" cy="92" rx="44" ry="30" transform="rotate(-70 98 92)"/></g>
+<path d="M100 66 C122 64 130 82 126 98 C122 116 100 120 86 113 C72 105 72 86 80 77 C86 70 93 67 100 66Z" fill="#C23B22"/>
+<g fill="#9C2A16"><circle cx="92" cy="84" r="5"/><circle cx="112" cy="92" r="4"/><circle cx="100" cy="106" r="4.5"/><circle cx="88" cy="100" r="3"/></g>
+<g fill="#3F8F3A"><ellipse cx="108" cy="78" rx="10" ry="5.5" transform="rotate(-30 108 78)"/><ellipse cx="94" cy="76" rx="8" ry="4.5" transform="rotate(40 94 76)"/></g>
+<g stroke="#2C6B28" stroke-width="1"><path d="M100 82 L116 73"/><path d="M89 72 L99 80"/></g>
+<g fill="#F7ECC2"><rect x="96" y="92" width="4" height="3"/><rect x="106" y="102" width="3" height="3"/><rect x="84" y="90" width="3" height="3"/><rect x="116" y="84" width="3" height="2"/><rect x="92" y="110" width="3" height="3"/></g>
+</svg>
