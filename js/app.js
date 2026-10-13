@@ -2,7 +2,7 @@
 // One phone creates a game (the host) and runs the engine; others join by QR code or game code.
 // Every screen is rendered from the shared game state; actions go to the host and come back as new state.
 
-import { validate, prepare, createState, apply, options, cookIndex, statsJSON, title as stepTitle, STATIONS } from './engine.js';
+import { validate, prepare, createState, apply, options, cookIndex, statsJSON, title as stepTitle } from './engine.js';
 import { Net, findGame } from './net.js';
 
 const UNITS = { g: 'г', ml: 'мл', pcs: 'шт.', tsp: 'ч. л.', tbsp: 'ст. л.', pinch: 'щеп.', handful: 'горсть', bunch: 'пучка', to_taste: 'по вкусу' };
@@ -62,7 +62,7 @@ let lookupTimer = null;
 const seenNotes = new Set();
 let deck = null;          // index of the recipe card being viewed; null = follow my own work
 let deckKey = '';         // what my own work was when the deck was last reset
-let showOther = false;    // the 'Другое дело' list is open
+let lastTap = 0;          // when this phone was last tapped
 
 const me = () => (st ? cookIndex(st, PID) : -1);
 
@@ -229,7 +229,7 @@ function scrHome() {
 
 function scrBook() {
   return `${back('Назад', 'home')}<h1>Книга рецептов</h1>
-    <div class="book">${book.map((c, i) => `<button class="dish" data-act="pick" data-i="${i}" aria-pressed="${i === pick}">${dishPic(c.r)}<span class="dt"><b>${esc(c.r.title)}</b></span></button>`).join('')}</div>
+    <div class="tiles">${book.map((c, i) => `<button class="tile dish" data-act="pick" data-i="${i}" aria-pressed="${i === pick}">${dishPic(c.r)}<b>${esc(c.r.title)}</b></button>`).join('')}</div>
     ${bookErr ? `<p class="err">${esc(bookErr)}</p>` : ''}${fileErr ? `<p class="err">${esc(fileErr)}</p>` : ''}
     <button class="linkish" data-act="addfile">Добавить рецепт из файла</button>`;
 }
@@ -293,21 +293,12 @@ function scrEquip() {
 
 const lowerFirst = t => (t ? t[0].toLowerCase() + t.slice(1) : '');
 
-/** What goes on by itself on the stove. Any cook presses "Готово" when the cue is there. */
-function stoveHTML() {
-  return Object.keys(st.bg).map(id => {
-    const s = ctx.S[id];
-    return `<div class="clock"><span><b>${esc(s.title)}</b><small>Готово, когда ${esc(lowerFirst(s.done_when))}</small></span><button data-act="bgdone" data-id="${esc(id)}">Готово</button></div>`;
-  }).join('');
-}
-
 /** A line about someone else's step, or a step that cannot be done yet. Empty when there is nothing to add. */
 function stepStatus(s) {
   if (st.done[s.id]) {
     const e = st.log.find(x => x.id === s.id && x.type === 'step');
     return e && e.cook != null ? `✓ Сделано · ${who(e.cook)}` : '✓ Сделано';
   }
-  if (st.bg[s.id]) return 'Идёт на плите';
   const ci = st.cooks.findIndex(c => c.task && c.task.type === 'step' && c.task.id === s.id);
   if (ci >= 0) return ci === me() ? '' : `Делает ${who(ci)}`;
   const missing = s.depends_on.filter(d => !st.done[d]);
@@ -315,21 +306,17 @@ function stepStatus(s) {
   return '';
 }
 
-const arrows = (idx, label) => `<div class="steptop">
-    <button class="nav" data-act="prev" ${idx != null && idx <= 0 ? 'disabled' : ''} aria-label="Предыдущий шаг">‹</button>
-    <span class="post">${label}</span>
-    <button class="nav" data-act="next" ${idx != null && idx >= R.steps.length - 1 ? 'disabled' : ''} aria-label="Следующий шаг">›</button></div>`;
-
-function stepCard(s, note) {
-  const status = stepStatus(s);
+/** The instruction, with "previous" and "next" along its sides. */
+function card(idx, inner) {
   return `<div class="card step" id="deck">
-    ${arrows(R.steps.indexOf(s), esc(STATIONS[s.station] || '') + (s.item ? ' · ' + esc(s.item) : ''))}
-    ${note ? `<p class="note">${note}</p>` : ''}
-    <h2>${esc(s.title)}</h2>
-    <p class="desc">${esc(s.description)}</p>
-    ${s.done_when ? `<div class="when"><b>Готово, когда</b>${esc(lowerFirst(s.done_when))}${s.typical ? `<small>Обычно ${esc(s.typical)}</small>` : ''}</div>` : ''}
-    ${status ? `<p class="stat-line">${status}</p>` : ''}
+    <button class="nav" data-act="prev" ${idx != null && idx <= 0 ? 'disabled' : ''} aria-label="Предыдущий шаг">‹</button>
+    <div class="inst">${inner}</div>
+    <button class="nav" data-act="next" ${idx != null && idx >= R.steps.length - 1 ? 'disabled' : ''} aria-label="Следующий шаг">›</button>
   </div>`;
+}
+function stepCard(idx, note) {
+  const s = R.steps[idx], status = stepStatus(s);
+  return card(idx, `${note ? `<p class="note">${note}</p>` : ''}<h2>${esc(s.title)}</h2><p class="desc">${esc(s.description)}</p>${status ? `<p class="stat-line">${status}</p>` : ''}`);
 }
 
 /** The recipe card this phone shows when the cook is not browsing: the step they are on. */
@@ -338,63 +325,55 @@ function myCard(ci) {
   return t && (t.type === 'step' || t.type === 'help') ? R.steps.indexOf(ctx.S[t.id]) : null;
 }
 const firstOpen = () => Math.max(0, R.steps.findIndex(s => !st.done[s.id]));
+/** For a cook with nothing to do right now: the next step of the recipe that nobody has yet. */
+const upcoming = () => {
+  const i = R.steps.findIndex(s => !st.done[s.id] && !st.cooks.some(c => c.task && c.task.type === 'step' && c.task.id === s.id));
+  return i >= 0 ? i : firstOpen();
+};
 
-function otherList(ci) {
+/** Three square tiles: what else this cook could do instead. Tapping one switches to it. */
+function suggestions(ci) {
   const o = options(st, ctx, ci);
-  return [
-    ...o.steps.map(s => `<button class="opt" data-act="take" data-kind="step" data-id="${esc(s.id)}"><b>${esc(s.title)}</b><span>${esc(STATIONS[s.station])}${s.item ? ' · ' + esc(s.item) : ''}</span></button>`),
-    ...o.helps.map(h => `<button class="opt" data-act="take" data-kind="help" data-id="${esc(h.id)}"><b>${esc(ctx.S[h.id].help.text)}</b><span>Помочь: ${esc(h.name)}</span></button>`),
-    ...o.fbs.map(f => `<button class="opt" data-act="take" data-kind="fallback" data-id="${esc(f.id)}"><b>${esc(f.title)}</b><span>Пока ждём</span></button>`),
-  ].join('');
+  const all = [
+    ...o.steps.map(s => `<button class="tile opt" data-act="take" data-kind="step" data-id="${esc(s.id)}"><b>${esc(s.title)}</b></button>`),
+    ...o.helps.map(h => `<button class="tile opt" data-act="take" data-kind="help" data-id="${esc(h.id)}"><b>${esc(ctx.S[h.id].help.text)}</b><span>помочь: ${esc(h.name)}</span></button>`),
+    ...o.fbs.map(f => `<button class="tile opt" data-act="take" data-kind="fallback" data-id="${esc(f.id)}"><b>${esc(f.title)}</b></button>`),
+  ].slice(0, 3);
+  return all.length ? `<div class="tiles">${all.join('')}</div>` : '';
 }
-
-let lastDone = null;   // { id, title, until }: the step this phone has just marked done, for "Отменить"
-let lastTap = 0;
 
 function scrCook() {
   const ci = me();
   const doneN = Object.keys(st.done).length, total = R.steps.length;
-  const head = `<div class="bar" role="progressbar" aria-label="Сделано шагов" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${doneN}"><i style="width:${(doneN / total) * 100}%"></i></div>${stoveHTML()}`;
+  const head = `<div class="bar" role="progressbar" aria-label="Сделано шагов" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${doneN}"><i style="width:${(doneN / total) * 100}%"></i></div>`;
   if (ci < 0) return head + `<div class="card grow mid"><h2>Игра идёт без этого телефона</h2><p class="muted">Присоединиться можно только до начала готовки.</p></div><button class="big secondary" data-act="leavegame">На главную</button>`;
 
   const t = st.cooks[ci].task;
   const key = t ? t.type + ':' + (t.id || '') : '';
   if (key !== deckKey) {
-    // A step arrived by itself while the cook was waiting: a short buzz, for phones that can.
+    // A step arrived by itself while the cook had nothing to do: a short buzz, for phones that can.
     if (deckKey.startsWith('choose') && key.startsWith('step') && Date.now() - lastTap > 2000) { try { navigator.vibrate && navigator.vibrate(200); } catch (e) { /* no vibration */ } }
-    deckKey = key; deck = null; showOther = false;
+    deckKey = key; deck = null;
   }
   const mine = myCard(ci);
-  const idx = deck ?? mine;
   const browsing = deck != null;
   const busy = isPending() ? 'disabled' : '';
+  const done = id => `<button class="big" data-act="done" data-id="${esc(id)}" ${busy}>Готово</button>`;
 
   let body, action = '';
-  if (idx == null && t && t.type === 'fallback') {
-    body = `<div class="card step"><p class="note">Пока остальное готовится</p><h2>${esc(ctx.F[t.id].title)}</h2></div>`;
-    action = `<button class="big" data-act="done" data-id="${esc(t.id)}" ${busy}>Готово</button>`;
-  } else if (idx == null) {
-    const others = st.cooks.map((x, i) => i).filter(i => i !== ci && st.cooks[i].task && st.cooks[i].task.type === 'step');
-    const list = otherList(ci);
-    body = `<div class="card step">${arrows(null, 'Рецепт')}
-      <h2>Ждём</h2><p class="desc muted">${Object.keys(st.bg).length ? 'Следующий шаг откроется, когда на плите будет готово.'
-        : others.length ? 'Следующий шаг откроется, когда закончит ' + others.map(who).join(', ') + '.' : 'Следующий шаг скоро откроется.'}</p>
-      ${list ? `<div class="opts"><p class="note">Можно пока</p>${list}</div>` : ''}</div>`;
+  if (browsing) {
+    body = stepCard(deck);
+    action = `<button class="big secondary" data-act="mine">К моему шагу</button>`;
+  } else if (t && t.type === 'fallback') {
+    body = card(null, `<p class="note">Пока остальное готовится</p><h2>${esc(ctx.F[t.id].title)}</h2>`);
+    action = done(t.id);
+  } else if (mine != null) {
+    body = stepCard(mine, t.type === 'help' ? `Помогаете: ${esc(ctx.S[t.id].help.text)}` : '');
+    action = done(t.id);
   } else {
-    const s = R.steps[idx];
-    const note = !browsing && t.type === 'help' ? `Помогаете: ${esc(ctx.S[t.id].help.text)}` : '';
-    body = stepCard(s, note);
-    if (browsing) action = `<button class="big secondary" data-act="mine">${mine == null ? 'Назад' : 'К моему шагу'}</button>`;
-    else action = `<button class="big" data-act="done" data-id="${esc(t.id)}" ${busy}>Готово</button>`;
+    body = stepCard(upcoming());
   }
-
-  const undo = !browsing && lastDone && Date.now() < lastDone.until
-    ? `<div class="undo"><span>✓ ${esc(lastDone.title)}</span><button class="linkish" data-act="undo" data-id="${esc(lastDone.id)}">Отменить</button></div>` : '';
-  const other = !browsing && t && t.type === 'step'
-    ? (showOther ? `<div class="opts">${otherList(ci) || '<p class="muted">Других шагов пока нет.</p>'}</div>` : `<button class="linkish" data-act="other">Другое дело</button>`)
-    : '';
-  return head + body + undo + action + other
-    + (role === 'host' ? `<div id="stopbox"><button class="linkish small" data-act="askstop">Закончить досрочно</button></div>` : '');
+  return head + body + `<div class="foot">${action}${browsing ? '' : suggestions(ci)}</div>`;
 }
 
 function dur(ms) {
@@ -406,7 +385,7 @@ function dur(ms) {
 
 function scrDone() {
   const total = st.end - st.start;
-  const TYPES = { step: 'шаг', help: 'помощь', fallback: 'пока ждём', stove: 'плита' };
+  const TYPES = { step: 'шаг', help: 'помощь', fallback: 'пока ждём' };
   const rows = st.log.filter(e => e.type !== 'wait').sort((a, b) => a.start - b.start);
   const complete = R.steps.every(s => st.done[s.id]);
   const steps = i => st.log.filter(e => e.cook === i && e.type === 'step').length;
@@ -483,28 +462,15 @@ app.addEventListener('click', e => {
     case 'tick': return send('tick', { key: b.dataset.k });
     case 'go': return send('go');
     case 'take': return send('take', { kind: b.dataset.kind, id: b.dataset.id });
-    case 'done': {
-      const t = st.cooks[me()] && st.cooks[me()].task;
-      if (t && t.type === 'step') { lastDone = { id: t.id, title: ctx.S[t.id].title, until: Date.now() + 8000 }; setTimeout(render, 8100); }
-      return send('done', { id: b.dataset.id });
-    }
-    case 'undo': lastDone = null; return send('undo', { id: b.dataset.id });
-    case 'bgdone': return send('bgdone', { id: b.dataset.id });
+    case 'done': return send('done', { id: b.dataset.id });
     case 'prev': case 'next': {
-      const mine = myCard(me());
-      if (deck == null && mine == null) deck = firstOpen();
-      else deck = Math.max(0, Math.min(R.steps.length - 1, (deck ?? mine) + (a === 'next' ? 1 : -1)));
-      if (deck === mine) deck = null;
+      const mine = myCard(me()), t = st.cooks[me()].task;
+      const shown = deck ?? mine ?? (t && t.type === 'fallback' ? null : upcoming());
+      deck = shown == null ? firstOpen() : Math.max(0, Math.min(R.steps.length - 1, shown + (a === 'next' ? 1 : -1)));
+      if (deck === mine || (mine == null && !(t && t.type === 'fallback') && deck === upcoming())) deck = null;
       return render();
     }
     case 'mine': deck = null; return render();
-    case 'other': showOther = true; return render();
-    case 'askstop':
-      $('#stopbox').innerHTML = `<div class="card"><b>Закончить готовку сейчас?</b><div class="row"><button class="ghost" data-act="stop">Да, закончить</button><button class="ghost" data-act="nostop">Нет</button></div></div>`;
-      $('#stopbox').scrollIntoView({ block: 'end' });
-      return;
-    case 'nostop': return render();
-    case 'stop': return send('stop');
     case 'copy': return copyStats();
   }
 });

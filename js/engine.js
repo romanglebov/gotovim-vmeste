@@ -59,7 +59,6 @@ export function prepare(R) {
   return { R, S, F, CAP, desc };
 }
 
-export const isBg = s => s.kind === 'waiting';
 export const maxCooks = R => Math.min(MAX_COOKS, (R.players && R.players.max) || 3);
 
 /* ---------------- state ---------------- */
@@ -70,7 +69,7 @@ export function createState({ code, recipe, hostPid, hostName, now }) {
     recipeId: recipe.id, recipeVersion: recipe.version ?? null,
     phase: 'lobby', host: hostPid,
     cooks: [{ pid: hostPid, name: cleanName(hostName, 0), task: null, last: null }],
-    checked: {}, done: {}, bg: {}, fb: {}, log: [],
+    checked: {}, done: {}, fb: {}, log: [],
     start: null, end: null, applied: [],
   };
 }
@@ -84,10 +83,9 @@ function usage(st, ctx) {
   const u = {};
   const add = id => ctx.S[id].resources.forEach(r => (u[r] = (u[r] || 0) + 1));
   st.cooks.forEach(c => { if (c.task && c.task.type === 'step') add(c.task.id); });
-  Object.keys(st.bg).forEach(add);
   return u;
 }
-const taken = (st, id) => !!st.bg[id] || st.cooks.some(c => c.task && c.task.type === 'step' && c.task.id === id);
+const taken = (st, id) => st.cooks.some(c => c.task && c.task.type === 'step' && c.task.id === id);
 
 /** Steps whose prerequisites are all done and whose equipment is free, most unlocking first. */
 export function avail(st, ctx) {
@@ -102,7 +100,7 @@ export function avail(st, ctx) {
 /** What a cook may switch to right now ("Другое дело"), best first. Steps already taken are not offered. */
 export function options(st, ctx, ci) {
   const c = st.cooks[ci];
-  const steps = avail(st, ctx).filter(s => !isBg(s));
+  const steps = avail(st, ctx);
   const helps = st.cooks
     .map((o, i) => ({ o, i }))
     .filter(({ o, i }) => i !== ci && o.task && o.task.type === 'step' && ctx.S[o.task.id].help
@@ -152,16 +150,10 @@ function log(st, e, now) {
   st.log.push({ type: e.type, id: e.id, of: e.of ?? null, cook: e.cook ?? null, start: e.start, end: now, ms: now - e.start });
 }
 
-// Steps that run by themselves (soup simmers, water boils) go to the shared stove strip.
-// Nothing ends by a clock: any cook presses "Готово" when the cue in `done_when` is there.
 // A free cook gets the best next step at once, so the phone always shows one step and one button.
 // The cook who has just finished goes first: the continuation of their own work stays theirs.
+// Steps that go on by themselves (soup simmers) are ordinary steps too: the cook presses "Готово" when it is ready.
 function schedule(st, ctx, now, first = -1) {
-  for (let g = 0; g < 50; g++) {
-    const b = avail(st, ctx).find(isBg);
-    if (!b) break;
-    st.bg[b.id] = { start: now };
-  }
   st.cooks.forEach(c => { if (!c.task) c.task = { type: 'choose', start: now }; });
   const order = st.cooks.map((_, i) => i).sort((a, b) => (b === first) - (a === first));
   for (const i of order) {
@@ -180,8 +172,6 @@ function finish(st, now) {
     if (c.task) log(st, { ...c.task, type: c.task.type === 'choose' ? 'wait' : c.task.type, cook: i }, now);
     c.task = null;
   });
-  Object.entries(st.bg).forEach(([id, b]) => log(st, { type: 'stove', id, start: b.start }, now));
-  st.bg = {};
   st.phase = 'done';
   st.end = now;
 }
@@ -256,8 +246,6 @@ function applyInner(st, ctx, a, now) {
       if (!t || t.type === 'choose') return { ok: false };
       if (a.id && t.id !== a.id) return { ok: false };
       log(st, { ...t, cook: ci }, now);
-      // Remembered so that a "Готово" pressed by mistake can be taken back.
-      c.prev = t.type === 'step' ? { id: t.id, start: t.start, last: c.last } : null;
       if (t.type === 'step' || t.type === 'help') c.last = t.id;
       if (t.type === 'step') {
         st.done[t.id] = true;
@@ -268,40 +256,6 @@ function applyInner(st, ctx, a, now) {
       if (t.type === 'fallback') st.fb[t.id] = true;
       c.task = null;
       schedule(st, ctx, now, ci);
-      return { ok: true };
-    }
-    case 'undo': {
-      // "Готово" pressed by mistake: the step comes back to this cook, as long as nothing after it has started.
-      if (st.phase !== 'cook' || ci < 0) return { ok: false };
-      const c = st.cooks[ci], p = c.prev;
-      if (!p || p.id !== a.id || !st.done[p.id]) return { ok: false, err: 'Этот шаг уже не отменить.' };
-      const deps = ctx.R.steps.filter(s => s.depends_on.includes(p.id));
-      if (deps.some(s => st.done[s.id] || st.cooks.some((o, j) => j !== ci && o.task && o.task.type === 'step' && o.task.id === s.id)))
-        return { ok: false, err: 'Уже не отменить: следующий шаг начат.' };
-      const saved = { task: c.task, bg: {} };
-      c.task = null;
-      for (const s of deps) if (st.bg[s.id]) { saved.bg[s.id] = st.bg[s.id]; delete st.bg[s.id]; }
-      const u = usage(st, ctx);
-      if (!ctx.S[p.id].resources.every(r => (u[r] || 0) + 1 <= (ctx.CAP[r] || 1))) {
-        c.task = saved.task; Object.assign(st.bg, saved.bg);
-        return { ok: false, err: 'Уже не отменить: инвентарь занят.' };
-      }
-      delete st.done[p.id];
-      const li = st.log.findLastIndex(e => e.type === 'step' && e.id === p.id && e.cook === ci);
-      if (li >= 0) st.log.splice(li, 1);
-      c.task = { type: 'step', id: p.id, start: p.start };
-      c.last = p.last; c.prev = null;
-      schedule(st, ctx, now);
-      return { ok: true };
-    }
-    case 'bgdone': {
-      if (st.phase !== 'cook' || ci < 0) return { ok: false };
-      const b = st.bg[a.id];
-      if (!b) return { ok: false };
-      log(st, { type: 'stove', id: a.id, start: b.start }, now);
-      st.done[a.id] = true;
-      delete st.bg[a.id];
-      schedule(st, ctx, now);
       return { ok: true };
     }
     case 'stop': {
