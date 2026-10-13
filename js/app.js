@@ -2,7 +2,7 @@
 // One phone creates a game (the host) and runs the engine; others join by QR code or game code.
 // Every screen is rendered from the shared game state; actions go to the host and come back as new state.
 
-import { validate, prepare, createState, apply, tick, options, cookIndex, maxCooks, statsJSON, title as stepTitle } from './engine.js';
+import { validate, prepare, createState, apply, options, cookIndex, maxCooks, statsJSON, title as stepTitle, STATIONS } from './engine.js';
 import { Net, findGame } from './net.js';
 
 const UNITS = { g: 'г', ml: 'мл', pcs: 'шт.', tsp: 'ч. л.', tbsp: 'ст. л.', pinch: 'щеп.', handful: 'горсть', bunch: 'пучка', to_taste: 'по вкусу' };
@@ -61,9 +61,10 @@ let offset = 0;           // host clock minus this phone's clock
 let lookup = null;        // guest: 'connecting' | 'searching' | 'missing'
 let lookupTimer = null;
 const seenNotes = new Set();
-const alerted = new Set();
+let deck = null;          // index of the recipe card being viewed; null = follow my own work
+let deckKey = '';         // what my own work was when the deck was last reset
+let showOther = false;    // the 'Другое дело' list is open
 
-const gameNow = () => Date.now() + (role === 'guest' ? offset : 0);
 const me = () => (st ? cookIndex(st, PID) : -1);
 
 function showToast(t) { toast = t; render(); clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast = ''; render(); }, 4500); }
@@ -128,11 +129,6 @@ function hostApply(a) {
   publishState(); render();
   return res;
 }
-setInterval(() => {
-  if (role !== 'host' || !st || st.phase !== 'cook') return;
-  const ended = tick(st, ctx, Date.now());
-  if (ended.length) { publishState(); beep(); render(); }
-}, 500);
 
 /* ---------------- guest ---------------- */
 
@@ -191,19 +187,7 @@ const isPending = () => role === 'guest' && pending.size > 0;
 
 /* ---------------- sound and screen ---------------- */
 
-let actx = null, wake = null;
-document.addEventListener('pointerdown', () => {
-  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch (e) { /* no audio */ }
-}, { capture: true });
-function beep() {
-  try {
-    if (!actx) return;
-    const o = actx.createOscillator(), g = actx.createGain();
-    o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(actx.destination);
-    o.start(); o.stop(actx.currentTime + 0.25);
-  } catch (e) { /* no audio */ }
-  try { navigator.vibrate && navigator.vibrate([150, 80, 150]); } catch (e) { /* no vibration */ }
-}
+let wake = null;
 async function keepAwake() {
   if (wake && !wake.released) return;
   try { wake = await navigator.wakeLock.request('screen'); } catch (e) { /* not supported */ }
@@ -287,7 +271,6 @@ function scrLobby() {
         : `<p class="muted">${netStatus === 'offline' ? 'Нет связи с сервером игры. Пробуем снова. Готовить одному можно и без связи.' : 'Подключаемся к серверу игры…'}</p>`}
       </div>
       <div class="card"><div class="eyebrow">В игре ${st.cooks.length} из ${max}</div>${players()}</div>
-      <label class="check"><input type="checkbox" id="fast" data-act="speed" ${st.speed > 1 ? 'checked' : ''}> Тестовый режим: таймеры в 20 раз быстрее</label>
       <div class="stack">
         <button class="big" data-act="toEquip" ${st.cooks.length >= min ? '' : 'disabled'}>Начать готовку</button>
         <button class="big secondary" data-act="cancelgame">Отменить игру</button>
@@ -332,72 +315,116 @@ function scrEquip() {
 }
 
 function stoveHTML() {
-  return Object.entries(st.bg).map(([id, b]) => {
+  return Object.keys(st.bg).map(id => {
     const s = ctx.S[id];
-    if (b.end) return `<div class="clock"><span>${esc(s.title)}</span><span class="t" data-bg="${esc(id)}">${fmt(b.end - gameNow())}</span></div>`;
-    const ask = s.timer && s.timer.type === 'reminder' && gameNow() - b.start >= (s.timer.after_seconds * 1000) / st.speed;
-    return `<div class="clock ${ask ? 'ask' : ''}" data-watch="${esc(id)}"><span>${esc(ask ? s.timer.text : s.title)}</span><button data-act="bgdone" data-id="${esc(id)}">Готово</button></div>`;
+    return `<div class="clock"><span><b>${esc(s.title)}</b><small>Готово, когда: ${esc(lowerFirst(s.done_when))}</small></span><button data-act="bgdone" data-id="${esc(id)}">Готово</button></div>`;
   }).join('');
 }
+const lowerFirst = t => (t ? t[0].toLowerCase() + t.slice(1) : '');
 
-function chooseHTML(ci) {
+/** Who did or does a step, and whether it can be taken. */
+function stepStatus(s) {
+  const by = ci => `<span class="who" style="--cc:${ccol(ci)}">${esc(st.cooks[ci].name)}</span>`;
+  if (st.done[s.id]) {
+    const e = st.log.find(x => x.id === s.id && x.type === 'step');
+    return { kind: 'done', html: e && e.cook != null ? `✓ Сделано · ${by(e.cook)}` : '✓ Сделано' };
+  }
+  if (st.bg[s.id]) return { kind: 'stove', html: 'Идёт на плите' };
+  const ci = st.cooks.findIndex(c => c.task && c.task.type === 'step' && c.task.id === s.id);
+  if (ci >= 0) return { kind: 'busy', ci, html: ci === me() ? 'Это ваш шаг' : `Сейчас делает ${by(ci)}` };
+  const missing = s.depends_on.filter(d => !st.done[d]);
+  if (missing.length) return { kind: 'locked', html: `Откроется после «${esc(missing.map(d => lowerFirst(ctx.S[d].title)).join('», «'))}»` };
+  return { kind: 'free', html: 'Можно брать' };
+}
+
+function stepCard(s, label) {
+  const n = ctx.R.steps.indexOf(s) + 1, total = ctx.R.steps.length;
+  const status = stepStatus(s);
+  return `<div class="card grow step s-${status.kind}" id="deck">
+    <div class="steptop"><span class="post">${esc(STATIONS[s.station] || '')}${s.item ? ' · ' + esc(s.item) : ''}</span><span class="prog">${n} из ${total}</span></div>
+    ${label ? `<div class="eyebrow next">${label}</div>` : ''}
+    <h2>${esc(s.title)}</h2>
+    <p class="desc">${esc(s.description)}</p>
+    ${s.done_when ? `<div class="when"><b>Готово, когда</b>${esc(lowerFirst(s.done_when))}${s.typical ? `<small>Обычно ${esc(s.typical)}</small>` : ''}</div>` : ''}
+    <p class="stat-line muted">${status.html}</p>
+  </div>`;
+}
+
+/** The step this phone shows when the cook is not browsing: their own step, or the one suggested next. */
+function myCard(ci) {
+  const t = st.cooks[ci].task;
+  if (t && (t.type === 'step' || t.type === 'help')) return ctx.R.steps.indexOf(ctx.S[t.id]);
+  if (t && t.type === 'choose') { const o = options(st, ctx, ci); if (o.steps.length) return ctx.R.steps.indexOf(o.steps[0]); }
+  return null;
+}
+
+function otherList(ci) {
   const o = options(st, ctx, ci);
-  const opens = s => { const n = ctx.desc[s.id].size; return n ? `откроет ещё ${n} ${plural(n, 'шаг', 'шага', 'шагов')}` : 'последний в своей цепочке'; };
-  const after = s => {
-    if (!s.depends_on.length) return 'можно делать сразу';
-    const end = id => { const e = st.log.filter(x => x.id === id && (x.type === 'step' || x.type === 'timer')).pop(); return e ? e.end : 0; };
-    const last = s.depends_on.reduce((a, b) => (end(b) > end(a) ? b : a));
-    return `открылся после «${ctx.S[last].title.toLowerCase()}»`;
-  };
   let html = '';
-  if (o.steps.length) html += `<div class="grp">Шаги</div>` + o.steps.map((s, i) =>
-    `<button class="opt ${i === 0 ? 'rec' : ''}" data-act="take" data-kind="step" data-id="${esc(s.id)}"><b>${esc(s.title)}</b><span>${i === 0 ? 'Советуем · ' : ''}${esc(after(s))} · ${opens(s)}</span></button>`).join('');
+  const rest = o.steps.slice(1);
+  if (rest.length) html += `<div class="grp">Другие шаги</div>` + rest.map(s =>
+    `<button class="opt" data-act="take" data-kind="step" data-id="${esc(s.id)}"><b>${esc(s.title)}</b><span>${esc(STATIONS[s.station])} · ${esc(s.item || '')}</span></button>`).join('');
   if (o.helps.length) html += `<div class="grp">Помочь</div>` + o.helps.map(h =>
-    `<button class="opt" data-act="take" data-kind="help" data-id="${esc(h.id)}"><b>${esc(ctx.S[h.id].help.text)}</b><span>${esc(h.name)} · ${esc(ctx.S[h.id].title.toLowerCase())}</span></button>`).join('');
+    `<button class="opt" data-act="take" data-kind="help" data-id="${esc(h.id)}"><b>${esc(ctx.S[h.id].help.text)}</b><span>${esc(h.name)} · ${esc(lowerFirst(ctx.S[h.id].title))}</span></button>`).join('');
   if (o.fbs.length) html += `<div class="grp">Пока ждём</div>` + o.fbs.map(f =>
     `<button class="opt" data-act="take" data-kind="fallback" data-id="${esc(f.id)}"><b>${esc(f.title)}</b></button>`).join('');
-  if (!html) {
-    const busy = st.cooks.map((x, i) => ({ x, i })).filter(({ x, i }) => i !== ci && x.task && x.task.type === 'step');
-    return `<div class="eyebrow">Свободная минута</div><h2>Ждём</h2><p class="desc muted">${Object.keys(st.bg).length ? 'На плите идёт процесс, варианты появятся сами.'
-      : busy.length ? 'Варианты появятся, когда закончат: ' + busy.map(({ x, i }) => `<span class="who" style="--cc:${ccol(i)}">${esc(x.name)}</span>`).join(', ') + '.' : 'Варианты появятся сами.'}</p>`;
-  }
-  return `<div class="eyebrow">Чем займётесь?</div><div class="opts ${isPending() ? 'busy' : ''}">${html}</div>`;
+  return html;
 }
 
 function scrCook() {
   const ci = me();
   const doneN = Object.keys(st.done).length, total = R.steps.length;
   const head = `<div class="bar"><i style="width:${(doneN / total) * 100}%"></i></div>
-    <div class="status"><span>${esc(R.title)}</span><span class="prog">${doneN} из ${total}</span></div>
-    ${Object.keys(st.bg).length ? `<div class="stove" id="stove">${stoveHTML()}</div>` : ''}`;
+    <div class="status"><span>${esc(R.title)}</span><span class="prog">сделано ${doneN} из ${total}</span></div>
+    ${Object.keys(st.bg).length ? `<div class="stove"><div class="eyebrow">На плите</div>${stoveHTML()}</div>` : ''}`;
   if (ci < 0) return head + `<div class="card grow"><h2>Игра идёт без этого телефона</h2><p class="muted">Присоединиться можно только до начала готовки.</p></div><button class="big secondary" data-act="leavegame">На главную</button>`;
+
   const t = st.cooks[ci].task;
-  let body = '', btn = true;
-  if (t && t.type === 'step') {
-    const s = ctx.S[t.id];
-    const hi = st.cooks.findIndex(h => h.task && h.task.type === 'help' && h.task.of === s.id);
-    body = `<div class="eyebrow">Шаг</div><h2>${esc(s.title)}</h2>
-      <div class="video"><div><small>Здесь будет ролик техники</small><br><code>${esc(s.technique || s.id)}</code></div></div>
-      <p class="desc">${esc(s.description)}</p>
-      ${s.timer && s.timer.type === 'countdown' ? `<div class="count" data-cd></div>` : ''}
-      ${s.timer && s.timer.type === 'reminder' ? `<div class="note" data-rem hidden>${esc(s.timer.text)}</div>` : ''}
-      ${hi >= 0 ? `<p class="muted">Помогает <span class="who" style="--cc:${ccol(hi)}">${esc(st.cooks[hi].name)}</span></p>` : ''}`;
-  } else if (t && t.type === 'help') {
-    const s = ctx.S[t.id];
-    body = `<div class="eyebrow">Помощь</div><h2>${esc(s.help.text)}</h2>
-      <p class="desc muted">Помогаете: <span class="who" style="--cc:${ccol(t.host)}">${esc(st.cooks[t.host].name)}</span>, «${esc(s.title.toLowerCase())}».</p>
-      <div class="video"><div><small>Здесь будет ролик техники</small><br><code>${esc(s.technique || s.id)}</code></div></div>`;
-  } else if (t && t.type === 'fallback') {
-    body = `<div class="eyebrow">Пока остальное готовится</div><h2>${esc(ctx.F[t.id].title)}</h2>`;
-  } else { btn = false; body = chooseHTML(ci); }
-  return head + `<div class="card grow">${body}</div>
-    ${btn ? `<button class="big" data-act="done" data-id="${esc(t.id)}" ${isPending() ? 'disabled' : ''}>Готово</button>` : ''}
-    ${role === 'host' ? `<div id="stopbox"><button class="ghost" data-act="askstop" style="width:100%;font-size:.88rem">Закончить досрочно</button></div>` : ''}`;
+  const key = t ? t.type + ':' + (t.id || '') : '';
+  if (key !== deckKey) { deckKey = key; deck = null; showOther = false; }
+  const mine = myCard(ci);
+  const idx = deck ?? mine;
+  const browsing = deck != null && deck !== mine;
+
+  let body, action = '';
+  if (t && t.type === 'fallback' && deck == null) {
+    body = `<div class="card grow step"><div class="eyebrow">Пока остальное готовится</div><h2>${esc(ctx.F[t.id].title)}</h2></div>`;
+    action = `<button class="big" data-act="done" data-id="${esc(t.id)}" ${isPending() ? 'disabled' : ''}>Готово</button>`;
+  } else if (idx == null) {
+    const busy = st.cooks.map((x, i) => ({ x, i })).filter(({ x, i }) => i !== ci && x.task && x.task.type === 'step');
+    body = `<div class="card grow step"><div class="eyebrow">Свободная минута</div><h2>Ждём</h2><p class="desc muted">${Object.keys(st.bg).length ? 'На плите идёт процесс. Когда будет готово, нажмите «Готово» наверху.'
+      : busy.length ? 'Следующий шаг откроется, когда закончат: ' + busy.map(({ x, i }) => `<span class="who" style="--cc:${ccol(i)}">${esc(x.name)}</span>`).join(', ') + '.' : 'Следующий шаг скоро откроется.'}</p>
+      ${otherList(ci) ? `<div class="opts">${otherList(ci)}</div>` : ''}</div>`;
+  } else {
+    const s = R.steps[idx];
+    let label = '';
+    if (!browsing && t && t.type === 'choose') label = 'Дальше для вас';
+    if (!browsing && t && t.type === 'help') label = `Вы помогаете: ${esc(ctx.S[t.id].help.text)}`;
+    body = stepCard(s, label);
+    const status = stepStatus(s);
+    if (t && t.type === 'step' && t.id === s.id) action = `<button class="big" data-act="done" data-id="${esc(t.id)}" ${isPending() ? 'disabled' : ''}>Готово</button>`;
+    else if (t && t.type === 'help' && t.id === s.id) action = `<button class="big" data-act="done" data-id="${esc(t.id)}" ${isPending() ? 'disabled' : ''}>Готово, помог(ла)</button>`;
+    else if (t && t.type === 'choose' && status.kind === 'free' && options(st, ctx, ci).steps.some(x => x.id === s.id))
+      action = `<button class="big" data-act="take" data-kind="step" data-id="${esc(s.id)}" ${isPending() ? 'disabled' : ''}>Беру этот шаг</button>`;
+    else if (t && t.type === 'choose' && status.kind === 'free') action = `<p class="muted center">Сейчас занят нужный инвентарь</p>`;
+    else if (status.kind === 'free') action = `<p class="muted center">Сначала закончите свой шаг</p>`;
+  }
+
+  const nav = idx == null ? '' : `<div class="deck-nav">
+      <button class="ghost" data-act="prev" ${idx <= 0 ? 'disabled' : ''} aria-label="Предыдущий шаг">‹</button>
+      ${browsing || (deck != null && mine == null) ? `<button class="ghost" data-act="mine">К моему шагу</button>` : `<span class="muted">листайте рецепт</span>`}
+      <button class="ghost" data-act="next" ${idx >= total - 1 ? 'disabled' : ''} aria-label="Следующий шаг">›</button>
+    </div>`;
+  const other = t && t.type === 'choose' && idx != null && !browsing
+    ? (showOther ? `<div class="opts">${otherList(ci) || '<p class="muted">Других дел пока нет.</p>'}</div>` : `<button class="ghost linkish" data-act="other">Другое дело</button>`)
+    : '';
+  return head + body + nav + action + other
+    + (role === 'host' ? `<div id="stopbox"><button class="ghost" data-act="askstop" style="width:100%;font-size:.85rem">Закончить досрочно</button></div>` : '');
 }
 
 function scrDone() {
   const total = st.end - st.start, ci = me();
-  const TYPES = { step: 'шаг', help: 'помощь', fallback: 'пока ждём', timer: 'плита' };
+  const TYPES = { step: 'шаг', help: 'помощь', fallback: 'пока ждём', stove: 'плита' };
   const rows = st.log.filter(e => e.type !== 'wait').sort((a, b) => a.start - b.start);
   const mine = ci >= 0 ? st.log.filter(e => e.cook === ci && e.type === 'step').length : 0;
   const complete = R.steps.every(s => st.done[s.id]);
@@ -433,47 +460,7 @@ function render() {
   const sel = fid ? f.selectionStart : null;
   app.innerHTML = statusBar() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '') + screen();
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { el.setSelectionRange(sel, sel); } catch (e) { /* not a text input */ } } }
-  tickUI();
 }
-
-/* ---------------- live timers ---------------- */
-
-function tickUI() {
-  if (!st || st.phase !== 'cook' || !ctx) return;
-  document.querySelectorAll('[data-bg]').forEach(el => { const b = st.bg[el.dataset.bg]; if (b) el.textContent = fmt(b.end - gameNow()); });
-  const ci = me(); if (ci < 0) return;
-  const t = st.cooks[ci].task; if (!t || t.type !== 'step') return;
-  const s = ctx.S[t.id], el = gameNow() - t.start;
-  const cd = document.querySelector('[data-cd]');
-  if (cd) {
-    const left = (s.timer.seconds * 1000) / st.speed - el;
-    if (left > 0) { cd.textContent = fmt(left); cd.classList.remove('over'); } else { cd.textContent = 'Время вышло'; cd.classList.add('over'); }
-  }
-  const rem = document.querySelector('[data-rem]');
-  if (rem) rem.hidden = el < (s.timer.after_seconds * 1000) / st.speed;
-}
-setInterval(() => {
-  if (!st || st.phase !== 'cook' || !ctx) return;
-  let redraw = false;
-  const ci = me();
-  const t = ci >= 0 && st.cooks[ci].task;
-  if (t && t.type === 'step') {
-    const s = ctx.S[t.id];
-    if (s.timer) {
-      const due = s.timer.type === 'countdown' ? s.timer.seconds : s.timer.after_seconds;
-      const key = 'task:' + t.id + ':' + t.start;
-      if (gameNow() - t.start >= (due * 1000) / st.speed && !alerted.has(key)) { alerted.add(key); beep(); }
-    }
-  }
-  for (const [id, b] of Object.entries(st.bg)) {
-    const s = ctx.S[id];
-    if (!b.end && s.timer && s.timer.type === 'reminder') {
-      const key = 'bg:' + id + ':' + b.start;
-      if (gameNow() - b.start >= (s.timer.after_seconds * 1000) / st.speed && !alerted.has(key)) { alerted.add(key); beep(); redraw = true; }
-    }
-  }
-  if (redraw) render(); else tickUI();
-}, 250);
 
 /* ---------------- input ---------------- */
 
@@ -481,9 +468,6 @@ app.addEventListener('input', e => {
   const b = e.target.dataset.bind;
   if (b === 'name') { myName = e.target.value; store.set('gv-name', myName); }
   if (b === 'code') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
-});
-app.addEventListener('change', e => {
-  if (e.target.dataset.act === 'speed') send('speed', { x: e.target.checked ? 20 : 1 });
 });
 app.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'code') $('[data-act="findcode"]').click();
@@ -515,6 +499,13 @@ app.addEventListener('click', e => {
     case 'take': return send('take', { kind: b.dataset.kind, id: b.dataset.id });
     case 'done': return send('done', { id: b.dataset.id });
     case 'bgdone': return send('bgdone', { id: b.dataset.id });
+    case 'prev': case 'next': {
+      const cur = deck ?? myCard(me()) ?? 0;
+      deck = Math.max(0, Math.min(R.steps.length - 1, cur + (a === 'next' ? 1 : -1)));
+      return render();
+    }
+    case 'mine': deck = null; return render();
+    case 'other': showOther = true; return render();
     case 'askstop':
       $('#stopbox').innerHTML = `<div class="card"><b>Закончить готовку сейчас?</b><div class="row"><button class="ghost" data-act="stop">Да, закончить</button><button class="ghost" data-act="nostop">Нет</button></div></div>`;
       return;
@@ -523,6 +514,17 @@ app.addEventListener('click', e => {
     case 'copy': return copyStats();
   }
 });
+
+let touchX = null, touchY = null;
+app.addEventListener('touchstart', e => { if (e.target.closest('#deck')) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; } }, { passive: true });
+app.addEventListener('touchend', e => {
+  if (touchX == null) return;
+  const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+  touchX = null;
+  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  const btn = $(`[data-act="${dx < 0 ? 'next' : 'prev'}"]`);
+  if (btn && !btn.disabled) btn.click();
+}, { passive: true });
 
 $('#file').onchange = e => {
   const f = e.target.files[0]; if (!f) return;

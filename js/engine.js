@@ -5,6 +5,9 @@
 export const SUPPORTED_FORMAT = 1;
 export const MAX_COOKS = 4;
 
+/** Kitchen posts. A cook who works at one post keeps getting work from the same post. */
+export const STATIONS = { sink: 'Раковина', board: 'Доска', counter: 'Стол', stove: 'Плита', appliance: 'Техника' };
+
 /* ---------------- recipes ---------------- */
 
 export function validate(r) {
@@ -22,8 +25,8 @@ export function validate(r) {
     s.depends_on = s.depends_on || []; s.resources = s.resources || []; s.kind = s.kind || 'active';
     for (const d of s.depends_on) if (!ids.has(d)) throw `шаг «${s.id}» зависит от несуществующего шага «${d}».`;
     for (const x of s.resources) if (!eq.has(x)) throw `шаг «${s.id}» использует «${x}», которого нет в инвентаре.`;
-    if (s.timer && s.timer.type === 'countdown' && !(s.timer.seconds > 0)) throw `у таймера шага «${s.id}» нет длительности.`;
-    if (s.timer && s.timer.type === 'reminder' && !(s.timer.after_seconds > 0)) throw `у напоминания шага «${s.id}» нет времени.`;
+    if (s.station && !STATIONS[s.station]) throw `у шага «${s.id}» неизвестный пост «${s.station}». Посты: ${Object.keys(STATIONS).join(', ')}.`;
+    s.station = s.station || 'counter';
   }
   const S = Object.fromEntries(r.steps.map(s => [s.id, s])), seen = new Set();
   const visit = (id, path) => {
@@ -65,8 +68,8 @@ export function createState({ code, recipe, hostPid, hostName, now }) {
   return {
     v: 1, code, rev: 0, now,
     recipeId: recipe.id, recipeVersion: recipe.version ?? null,
-    phase: 'lobby', host: hostPid, speed: 1,
-    cooks: [{ pid: hostPid, name: cleanName(hostName, 0), task: null }],
+    phase: 'lobby', host: hostPid,
+    cooks: [{ pid: hostPid, name: cleanName(hostName, 0), task: null, last: null }],
     checked: {}, done: {}, bg: {}, fb: {}, log: [],
     start: null, end: null, applied: [],
   };
@@ -108,19 +111,54 @@ export function options(st, ctx, ci) {
   const fbs = Object.keys(st.done).length
     ? ctx.R.fallback_tasks.filter(f => !st.fb[f.id] && !st.cooks.some(o => o !== c && o.task && o.task.type === 'fallback' && o.task.id === f.id))
     : [];
-  return { steps, helps, fbs };
+  return { steps: suggestOrder(st, ctx, ci, steps), helps, fbs };
+}
+
+/**
+ * Order the free steps for one cook, best first:
+ *   1. the direct continuation of what this cook just finished (washed the pepper → seed the pepper);
+ *   2. the same product, then the same post (whoever is at the board keeps cutting);
+ *   3. the step that unlocks the most other steps.
+ * Steps at a post another cook is working at go down; steps marked `late` (set the table) go last.
+ * Another cook's continuation stays theirs: if Рома has just peeled the onion, cutting it is offered
+ * to Рома first and goes to the bottom of Алёна's list; the same, more mildly, for a product someone else is busy with.
+ */
+export function suggestOrder(st, ctx, ci, steps) {
+  const c = st.cooks[ci];
+  const last = c && c.last ? ctx.S[c.last] : null;
+  const others = st.cooks.filter((o, j) => j !== ci);
+  const busy = new Set(others.filter(o => o.task && o.task.type === 'step').map(o => ctx.S[o.task.id].station));
+  const othersLast = new Set(others.map(o => o.last).filter(Boolean));
+  const othersItems = new Set(others.flatMap(o => [o.last && ctx.S[o.last] && ctx.S[o.last].item,
+    o.task && o.task.type === 'step' && ctx.S[o.task.id].item]).filter(Boolean));
+  const score = s => {
+    let v = ctx.desc[s.id].size;
+    if (busy.has(s.station)) v -= 40;
+    if (s.late) v -= 500;
+    const mineToo = last && s.depends_on.includes(last.id);
+    if (!mineToo && s.depends_on.some(d => othersLast.has(d))) v -= 150;
+    else if (s.item && othersItems.has(s.item) && !(last && last.item === s.item)) v -= 60;
+    if (last) {
+      if (s.depends_on.includes(last.id)) v += 100;
+      if (s.item && s.item === last.item) v += 50;
+      if (s.station === last.station) v += 30;
+    }
+    return v;
+  };
+  return steps.map(s => [score(s), s]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
 }
 
 function log(st, e, now) {
   st.log.push({ type: e.type, id: e.id, of: e.of ?? null, cook: e.cook ?? null, start: e.start, end: now, ms: now - e.start });
 }
 
+// Steps that run by themselves (soup simmers, water boils) go to the shared stove strip.
+// Nothing ends by a clock: any cook presses "Готово" when the cue in `done_when` is there.
 function schedule(st, ctx, now) {
   for (let g = 0; g < 50; g++) {
     const b = avail(st, ctx).find(isBg);
     if (!b) break;
-    const cd = b.timer && b.timer.type === 'countdown';
-    st.bg[b.id] = { start: now, end: cd ? now + (b.timer.seconds * 1000) / st.speed : null };
+    st.bg[b.id] = { start: now };
   }
   st.cooks.forEach(c => { if (!c.task) c.task = { type: 'choose', start: now }; });
   if (ctx.R.steps.every(s => st.done[s.id])) finish(st, now);
@@ -131,26 +169,10 @@ function finish(st, now) {
     if (c.task) log(st, { ...c.task, type: c.task.type === 'choose' ? 'wait' : c.task.type, cook: i }, now);
     c.task = null;
   });
-  Object.entries(st.bg).forEach(([id, b]) => log(st, { type: 'timer', id, start: b.start }, now));
+  Object.entries(st.bg).forEach(([id, b]) => log(st, { type: 'stove', id, start: b.start }, now));
   st.bg = {};
   st.phase = 'done';
   st.end = now;
-}
-
-/** Advance the clock: countdowns on the stove finish by themselves. Returns ids that just finished. */
-export function tick(st, ctx, now) {
-  if (st.phase !== 'cook') return [];
-  const ended = [];
-  for (const [id, b] of Object.entries(st.bg)) {
-    if (b.end && now >= b.end) {
-      log(st, { type: 'timer', id, start: b.start }, now);
-      st.done[id] = true;
-      delete st.bg[id];
-      ended.push(id);
-    }
-  }
-  if (ended.length) { schedule(st, ctx, now); st.rev++; }
-  return ended;
 }
 
 /* ---------------- actions ---------------- */
@@ -175,17 +197,12 @@ function applyInner(st, ctx, a, now) {
       if (ci >= 0) { st.cooks[ci].name = cleanName(a.name, ci); return { ok: true }; }
       if (st.phase !== 'lobby') return { ok: false, err: 'Игра уже началась, присоединиться можно только в лобби.' };
       if (st.cooks.length >= maxCooks(ctx.R)) return { ok: false, err: 'В игре уже максимум поваров для этого рецепта.' };
-      st.cooks.push({ pid: a.pid, name: cleanName(a.name, st.cooks.length), task: null });
+      st.cooks.push({ pid: a.pid, name: cleanName(a.name, st.cooks.length), task: null, last: null });
       return { ok: true };
     }
     case 'leave': {
       if (st.phase !== 'lobby' || ci <= 0) return { ok: false, err: 'Сейчас выйти нельзя.' };
       st.cooks.splice(ci, 1);
-      return { ok: true };
-    }
-    case 'speed': {
-      if (!isHost || st.phase !== 'lobby') return { ok: false };
-      st.speed = a.x === 20 ? 20 : 1;
       return { ok: true };
     }
     case 'toEquip': {
@@ -227,10 +244,11 @@ function applyInner(st, ctx, a, now) {
       if (!t || t.type === 'choose') return { ok: false };
       if (a.id && t.id !== a.id) return { ok: false };
       log(st, { ...t, cook: ci }, now);
+      if (t.type === 'step' || t.type === 'help') c.last = t.id;
       if (t.type === 'step') {
         st.done[t.id] = true;
         st.cooks.forEach((h, hi) => {
-          if (h.task && h.task.type === 'help' && h.task.of === t.id) { log(st, { ...h.task, cook: hi }, now); h.task = null; }
+          if (h.task && h.task.type === 'help' && h.task.of === t.id) { log(st, { ...h.task, cook: hi }, now); h.last = t.id; h.task = null; }
         });
       }
       if (t.type === 'fallback') st.fb[t.id] = true;
@@ -242,7 +260,7 @@ function applyInner(st, ctx, a, now) {
       if (st.phase !== 'cook' || ci < 0) return { ok: false };
       const b = st.bg[a.id];
       if (!b) return { ok: false };
-      log(st, { type: 'timer', id: a.id, start: b.start }, now);
+      log(st, { type: 'stove', id: a.id, start: b.start }, now);
       st.done[a.id] = true;
       delete st.bg[a.id];
       schedule(st, ctx, now);
@@ -266,7 +284,7 @@ export function title(ctx, id) {
 
 export function statsJSON(st, ctx) {
   return {
-    recipe: st.recipeId, recipe_version: st.recipeVersion, speed: st.speed,
+    recipe: st.recipeId, recipe_version: st.recipeVersion,
     started: st.start ? new Date(st.start).toISOString() : null,
     total_ms: st.end && st.start ? st.end - st.start : null,
     cooks: st.cooks.map(c => c.name),
