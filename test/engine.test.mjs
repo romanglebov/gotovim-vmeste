@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validate, prepare, createState, apply, tick, options, avail, isBg } from '../js/engine.js';
+import { validate, prepare, createState, apply, options, avail, isBg, STATIONS } from '../js/engine.js';
 
 const dir = new URL('../recipes/', import.meta.url);
 const index = JSON.parse(readFileSync(new URL('index.json', dir)));
@@ -35,8 +35,8 @@ function play(recipe, nCooks, strategy, seed = 1) {
   const ctx = prepare(R);
   const rand = rng(seed);
   let now = 1_000_000;
-  const st = createState({ code: 'TEST', recipe: R, hostPid: 'p0', hostName: 'Хозяин', now });
-  for (let i = 1; i < nCooks; i++) assert.ok(act(st, ctx, { pid: 'p' + i, type: 'join', name: 'Гость ' + i }, now).ok);
+  const st = createState({ code: 'TEST', recipe: R, hostPid: 'p0', hostName: 'Рома', now });
+  for (let i = 1; i < nCooks; i++) assert.ok(act(st, ctx, { pid: 'p' + i, type: 'join', name: ['Алёна', 'Третий'][i - 1] }, now).ok);
   assert.equal(st.cooks.length, nCooks);
   assert.ok(act(st, ctx, { pid: 'p0', type: 'toEquip' }, now).ok);
   for (const e of R.equipment) act(st, ctx, { pid: 'p1'.slice(0, nCooks > 1 ? 2 : 0) || 'p0', type: 'tick', key: 'e:' + e.id }, now);
@@ -45,8 +45,6 @@ function play(recipe, nCooks, strategy, seed = 1) {
   const startedAt = {};
   for (let guard = 0; guard < 5000 && st.phase === 'cook'; guard++) {
     now += 1000 + Math.floor(rand() * 4000);
-    tick(st, ctx, now);
-    if (st.phase !== 'cook') break;
     let did = false;
     const order = st.cooks.map((_, i) => i);
     if (strategy === 'random') order.sort(() => rand() - 0.5);
@@ -71,9 +69,9 @@ function play(recipe, nCooks, strategy, seed = 1) {
         did = true;
       }
     }
-    // Something on the stove without a countdown waits for a person to press "Готово".
-    if (!did) {
-      const id = Object.keys(st.bg).find(id => st.bg[id].end == null);
+    // What runs on the stove by itself ends when a cook sees the cue and presses "Готово".
+    if (!did || rand() < 0.2) {
+      const id = Object.keys(st.bg)[0];
       if (id) act(st, ctx, { pid: 'p0', type: 'bgdone', id }, now);
     }
   }
@@ -81,9 +79,9 @@ function play(recipe, nCooks, strategy, seed = 1) {
   for (const s of R.steps) assert.ok(st.done[s.id], `${s.id} not done`);
   // Order respected: each step started after all its prerequisites finished.
   const finishedAt = {};
-  for (const e of st.log) if (e.type === 'step' || e.type === 'timer') finishedAt[e.id] = e.end;
+  for (const e of st.log) if (e.type === 'step' || e.type === 'stove') finishedAt[e.id] = e.end;
   for (const s of R.steps) for (const d of s.depends_on) {
-    const started = st.log.find(e => e.id === s.id && (e.type === 'step' || e.type === 'timer')).start;
+    const started = st.log.find(e => e.id === s.id && (e.type === 'step' || e.type === 'stove')).start;
     assert.ok(finishedAt[d] <= started, `${R.id}: ${s.id} started before ${d} finished`);
   }
   return st;
@@ -125,7 +123,50 @@ test('нельзя присоединиться после начала', () => 
   assert.equal(apply(st, ctx, { pid: 'late', type: 'join', name: 'Поздний' }, 0).ok, false);
 });
 
-test('все шаги ожидания без таймера заканчиваются кнопкой, с таймером — сами', () => {
-  for (const r of recipes) for (const s of r.steps) if (isBg(s) && s.timer) assert.ok(['countdown', 'reminder'].includes(s.timer.type));
-  assert.ok(avail);
+test('у каждого шага есть пост, продукт, признак готовности и подсказка по времени', () => {
+  for (const r of recipes) for (const s of r.steps) {
+    assert.ok(STATIONS[s.station], `${r.id}/${s.id}: пост`);
+    assert.ok(s.item && s.done_when && s.typical, `${r.id}/${s.id}: item, done_when, typical`);
+    assert.equal(s.timer, undefined, `${r.id}/${s.id}: таймеров больше нет`);
+  }
+  assert.ok(avail && isBg);
+});
+
+function started(recipe) {
+  const R = JSON.parse(JSON.stringify(recipe)); const ctx = prepare(R);
+  const st = createState({ code: 'X', recipe: R, hostPid: 'h', hostName: 'Рома', now: 0 });
+  apply(st, ctx, { pid: 'g', type: 'join', name: 'Алёна' }, 0);
+  apply(st, ctx, { pid: 'h', type: 'toEquip' }, 0);
+  apply(st, ctx, { pid: 'h', type: 'go' }, 0);
+  return { st, ctx };
+}
+
+test('после шага первым предлагается его продолжение', () => {
+  const { st, ctx } = started(recipes.find(r => r.id === 'shakshuka'));
+  apply(st, ctx, { pid: 'g', type: 'take', kind: 'step', id: 'wash_pepper' }, 1);
+  apply(st, ctx, { pid: 'g', type: 'done', id: 'wash_pepper' }, 2);
+  assert.equal(options(st, ctx, 1).steps[0].id, 'seed_pepper');
+});
+
+test('у раковины предлагается ещё мытьё, если продолжение занято', () => {
+  const { st, ctx } = started(recipes.find(r => r.id === 'mushroom_cream_soup'));
+  apply(st, ctx, { pid: 'g', type: 'take', kind: 'step', id: 'wash_potatoes' }, 1);
+  apply(st, ctx, { pid: 'g', type: 'done', id: 'wash_potatoes' }, 2);
+  assert.equal(options(st, ctx, 1).steps[0].id, 'peel_potatoes');
+  apply(st, ctx, { pid: 'h', type: 'take', kind: 'step', id: 'peel_potatoes' }, 3);
+  assert.equal(ctx.S[options(st, ctx, 1).steps[0].id].station, 'sink');
+});
+
+test('накрыть на стол предлагается последним', () => {
+  const { st, ctx } = started(recipes.find(r => r.id === 'mushroom_cream_soup'));
+  const list = options(st, ctx, 0).steps;
+  assert.equal(list.at(-1).id, 'set_table');
+});
+
+test('продолжение чужого шага не предлагается первым другому повару', () => {
+  const { st, ctx } = started(recipes.find(r => r.id === 'shakshuka'));
+  apply(st, ctx, { pid: 'h', type: 'take', kind: 'step', id: 'peel_onion' }, 1);
+  apply(st, ctx, { pid: 'h', type: 'done', id: 'peel_onion' }, 2);
+  assert.equal(options(st, ctx, 0).steps[0].id, 'dice_onion', 'Роме — нарезать свой лук');
+  assert.notEqual(options(st, ctx, 1).steps[0].id, 'dice_onion', 'Алёне — что-то другое');
 });

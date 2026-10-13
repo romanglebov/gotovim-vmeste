@@ -47,13 +47,11 @@ async function playGame(title, reloadMidway) {
 
   await guest.goto(`${dev.url}#join-${code}-0`);
   await guest.locator('#name').waitFor({ timeout: 15000 });
-  await guest.fill('#name', 'Аня');
+  await guest.fill('#name', 'Алёна');
   await guest.click('[data-act="join"]');
-  await host.locator('.people li', { hasText: 'Аня' }).waitFor({ timeout: 10000 });
+  await host.locator('.people li', { hasText: 'Алёна' }).waitFor({ timeout: 10000 });
   await guest.locator('text=Ждём, пока ведущий начнёт').waitFor({ timeout: 10000 });
 
-  await host.check('#fast');
-  await sleep(300);
   await host.click('[data-act="toEquip"]');
   await guest.locator('text=Вам понадобятся').waitFor({ timeout: 10000 });
 
@@ -63,6 +61,14 @@ async function playGame(title, reloadMidway) {
   await host.locator('.tile.ok').nth(1).waitFor({ timeout: 10000 });
   await guest.locator('.tile.ok').nth(1).waitFor({ timeout: 10000 });
   await guest.click('[data-act="go"]');
+
+  // The recipe deck can be browsed and brought back to your own step.
+  await host.locator('#deck').waitFor({ timeout: 10000 });
+  const myTitle = await host.locator('#deck h2').innerText();
+  await host.click('[data-act="next"]');
+  await host.click('[data-act="next"]');
+  await host.locator('[data-act="mine"]').click();
+  if ((await host.locator('#deck h2').innerText()) !== myTitle) errors.push(`${title}: «К моему шагу» не вернул к своему шагу`);
 
   const phones = [host, guest];
   const start = Date.now();
@@ -77,7 +83,7 @@ async function playGame(title, reloadMidway) {
     }
     let acted = false;
     for (const p of phones) {
-      for (const sel of ['button[data-act="done"]:not([disabled])', '.opt.rec', '.opt', '[data-act="bgdone"]']) {
+      for (const sel of ['button[data-act="done"]:not([disabled])', 'button.big[data-act="take"]:not([disabled])', '[data-act="bgdone"]', '.opt']) {
         const el = p.locator(sel).first();
         if (await el.count() && await el.isVisible().catch(() => false)) {
           await el.click({ timeout: 2000 }).catch(() => {});
