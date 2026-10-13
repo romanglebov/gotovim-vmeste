@@ -1,9 +1,9 @@
 // Engine tests: every recipe in the book is cooked to the end by 1, 2 and 3 cooks,
-// with cooks switching steps and taking back a "Готово" now and then. Run: npm test
+// with cooks switching steps now and then. Run: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validate, prepare, createState, apply, options, avail, isBg, STATIONS } from '../js/engine.js';
+import { validate, prepare, createState, apply, options, STATIONS } from '../js/engine.js';
 
 const dir = new URL('../recipes/', import.meta.url);
 const index = JSON.parse(readFileSync(new URL('index.json', dir)));
@@ -23,10 +23,9 @@ function checkInvariants(st, ctx) {
   const u = {};
   const add = id => ctx.S[id].resources.forEach(r => (u[r] = (u[r] || 0) + 1));
   st.cooks.forEach(c => { if (c.task && c.task.type === 'step') add(c.task.id); });
-  Object.keys(st.bg).forEach(add);
   for (const [r, n] of Object.entries(u)) assert.ok(n <= ctx.CAP[r], `resource ${r} used ${n} > ${ctx.CAP[r]}`);
   // Every running step has all its prerequisites done.
-  const running = [...st.cooks.filter(c => c.task && c.task.type === 'step').map(c => c.task.id), ...Object.keys(st.bg)];
+  const running = st.cooks.filter(c => c.task && c.task.type === 'step').map(c => c.task.id);
   for (const id of running) for (const d of ctx.S[id].depends_on) assert.ok(st.done[d], `${id} started before ${d}`);
 }
 
@@ -63,29 +62,19 @@ function play(recipe, nCooks, strategy, seed = 1) {
         assert.ok(act(st, ctx, { pid: c.pid, type: 'take', kind: 'step', id: s.id }, now).ok);
         did = true;
       } else if (rand() < 0.6) {
-        const id = c.task.id;
-        assert.ok(act(st, ctx, { pid: c.pid, type: 'done', id }, now).ok);
-        // "Отменить" right after "Готово".
-        if (strategy === 'random' && st.phase === 'cook' && rand() < 0.1) {
-          const r = act(st, ctx, { pid: c.pid, type: 'undo', id }, now);
-          if (r.ok) assert.ok(!st.done[id] && st.cooks[ci].task.id === id, 'step is back after undo');
-        }
+        assert.ok(act(st, ctx, { pid: c.pid, type: 'done', id: c.task.id }, now).ok);
         did = true;
       }
     }
-    // What runs on the stove by itself ends when a cook sees the cue and presses "Готово".
-    if (!did || rand() < 0.2) {
-      const id = Object.keys(st.bg)[0];
-      if (id) act(st, ctx, { pid: 'p0', type: 'bgdone', id }, now);
-    }
+    if (!did) assert.ok(st.cooks.some(c => c.task && c.task.type !== 'choose'), 'nobody can move: the game is stuck');
   }
   assert.equal(st.phase, 'done', `${R.id} with ${nCooks} cooks did not finish`);
   for (const s of R.steps) assert.ok(st.done[s.id], `${s.id} not done`);
   // Order respected: each step started after all its prerequisites finished.
   const finishedAt = {};
-  for (const e of st.log) if (e.type === 'step' || e.type === 'stove') finishedAt[e.id] = e.end;
+  for (const e of st.log) if (e.type === 'step') finishedAt[e.id] = e.end;
   for (const s of R.steps) for (const d of s.depends_on) {
-    const started = st.log.find(e => e.id === s.id && (e.type === 'step' || e.type === 'stove')).start;
+    const started = st.log.find(e => e.id === s.id && e.type === 'step').start;
     assert.ok(finishedAt[d] <= started, `${R.id}: ${s.id} started before ${d} finished`);
   }
   return st;
@@ -127,13 +116,12 @@ test('нельзя присоединиться после начала', () => 
   assert.equal(apply(st, ctx, { pid: 'late', type: 'join', name: 'Поздний' }, 0).ok, false);
 });
 
-test('у каждого шага есть пост, продукт, признак готовности и подсказка по времени', () => {
+test('у каждого шага есть пост и продукт, а признаки готовности — в самой инструкции', () => {
   for (const r of recipes) for (const s of r.steps) {
     assert.ok(STATIONS[s.station], `${r.id}/${s.id}: пост`);
-    assert.ok(s.item && s.done_when && s.typical, `${r.id}/${s.id}: item, done_when, typical`);
-    assert.equal(s.timer, undefined, `${r.id}/${s.id}: таймеров больше нет`);
+    assert.ok(s.item && s.description, `${r.id}/${s.id}: item, description`);
+    for (const k of ['timer', 'done_when', 'typical']) assert.equal(s[k], undefined, `${r.id}/${s.id}: без ${k}`);
   }
-  assert.ok(avail && isBg);
 });
 
 function started(recipe) {
@@ -162,10 +150,13 @@ test('после «Готово» повару сразу достаётся п�
 
 test('продолжение шага остаётся за тем, кто его начал', () => {
   const { st, ctx } = started(recipes.find(r => r.id === 'shakshuka'));
-  apply(st, ctx, { pid: 'h', type: 'take', kind: 'step', id: 'peel_onion' }, 1);
-  apply(st, ctx, { pid: 'h', type: 'done', id: 'peel_onion' }, 2);
-  assert.equal(st.cooks[0].task.id, 'dice_onion', 'Рома режет свой лук');
-  assert.notEqual(st.cooks[1].task.id, 'dice_onion', 'у Алёны другое дело');
+  if (st.cooks[0].task.id !== 'wash_pepper') {
+    if (st.cooks[1].task.id === 'wash_pepper') apply(st, ctx, { pid: 'g', type: 'take', kind: 'step', id: options(st, ctx, 1).steps[0].id }, 1);
+    assert.ok(apply(st, ctx, { pid: 'h', type: 'take', kind: 'step', id: 'wash_pepper' }, 1).ok);
+  }
+  apply(st, ctx, { pid: 'h', type: 'done', id: 'wash_pepper' }, 2);
+  assert.equal(st.cooks[0].task.id, 'seed_pepper', 'Рома чистит свой перец');
+  assert.notEqual(st.cooks[1].task.id, 'seed_pepper', 'у Алёны другое дело');
 });
 
 test('«Другое дело» возвращает прежний шаг остальным', () => {
@@ -177,19 +168,11 @@ test('«Другое дело» возвращает прежний шаг ос�
   assert.ok(options(st, ctx, 1).steps.some(s => s.id === was), 'прежний шаг снова свободен');
 });
 
-test('«Отменить» возвращает шаг, пока следующий не начат', () => {
-  const { st, ctx } = started(recipes.find(r => r.id === 'shakshuka'));
-  apply(st, ctx, { pid: 'h', type: 'take', kind: 'step', id: 'peel_onion' }, 1);
-  apply(st, ctx, { pid: 'h', type: 'done', id: 'peel_onion' }, 2);
-  assert.equal(st.cooks[0].task.id, 'dice_onion');
-  assert.ok(apply(st, ctx, { pid: 'h', type: 'undo', id: 'peel_onion' }, 3).ok);
-  assert.equal(st.cooks[0].task.id, 'peel_onion');
-  assert.ok(!st.done.peel_onion);
-  assert.ok(!st.log.some(e => e.id === 'peel_onion'), 'в статистике нет отменённого шага');
-  // Once the next step is done, there is nothing to take back.
-  apply(st, ctx, { pid: 'h', type: 'done', id: 'peel_onion' }, 4);
-  apply(st, ctx, { pid: 'h', type: 'done', id: 'dice_onion' }, 5);
-  assert.equal(apply(st, ctx, { pid: 'h', type: 'undo', id: 'peel_onion' }, 6).ok, false);
+test('шаги, которые идут сами (суп варится), достаются повару как обычные', () => {
+  const { st, ctx } = started(recipes.find(r => r.id === 'pasta_tomato'));
+  const ci = st.cooks.findIndex(c => c.task.id === 'fill_pot');
+  apply(st, ctx, { pid: st.cooks[ci].pid, type: 'done', id: 'fill_pot' }, 2);
+  assert.equal(st.cooks[ci].task.id, 'wait_boil');
 });
 
 test('накрыть на стол предлагается последним', () => {

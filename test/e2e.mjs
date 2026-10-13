@@ -70,12 +70,6 @@ async function playGame(title, reloadMidway) {
   await host.locator('[data-act="mine"]').click();
   if ((await host.locator('#deck h2').innerText()) !== myTitle) errors.push(`${title}: «К моему шагу» не вернул к своему шагу`);
 
-  // "Готово" pressed by mistake is taken back with "Отменить".
-  await host.click('[data-act="done"]');
-  await host.locator('[data-act="undo"]').click({ timeout: 5000 });
-  await sleep(300);
-  if ((await host.locator('#deck h2').innerText()) !== myTitle) errors.push(`${title}: «Отменить» не вернул шаг`);
-
   const phones = [host, guest];
   const start = Date.now();
   let reloaded = false, actions = 0;
@@ -89,7 +83,7 @@ async function playGame(title, reloadMidway) {
     }
     let acted = false;
     for (const p of phones) {
-      for (const sel of ['button[data-act="done"]:not([disabled])', '[data-act="bgdone"]', '.opt']) {
+      for (const sel of ['button[data-act="done"]:not([disabled])', '.opt']) {
         const el = p.locator(sel).first();
         if (await el.count() && await el.isVisible().catch(() => false)) {
           await el.click({ timeout: 2000 }).catch(() => {});
