@@ -1,0 +1,699 @@
+{
+  "format_version": 1,
+  "id": "mushroom_cream_soup",
+  "version": 2,
+  "title": "Грибной крем-суп",
+  "image": "images/mushroom_soup.svg",
+  "icon": "🍲",
+  "base_servings": 4,
+  "players": {
+    "min": 1,
+    "max": 3
+  },
+  "equipment": [
+    {
+      "id": "pot",
+      "name": "Кастрюля 2,5–3 л с толстым дном и крышкой",
+      "count": 1,
+      "icon": "🍲"
+    },
+    {
+      "id": "board",
+      "name": "Разделочная доска",
+      "count": 2,
+      "icon": "🪵"
+    },
+    {
+      "id": "knife",
+      "name": "Острый нож",
+      "count": 2,
+      "icon": "🔪"
+    },
+    {
+      "id": "peeler",
+      "name": "Овощечистка",
+      "count": 1,
+      "icon": "🥔"
+    },
+    {
+      "id": "spatula",
+      "name": "Деревянная лопатка",
+      "count": 1,
+      "icon": "🥄"
+    },
+    {
+      "id": "colander",
+      "name": "Дуршлаг",
+      "count": 1,
+      "icon": "🥣"
+    },
+    {
+      "id": "bowl",
+      "name": "Миска",
+      "count": 2,
+      "icon": "🥣"
+    },
+    {
+      "id": "scales",
+      "name": "Кухонные весы",
+      "count": 1,
+      "icon": "⚖️"
+    },
+    {
+      "id": "kettle",
+      "name": "Чайник",
+      "count": 1,
+      "icon": "🫖"
+    },
+    {
+      "id": "blender",
+      "name": "Погружной блендер",
+      "count": 1,
+      "icon": "🌀"
+    },
+    {
+      "id": "towels",
+      "name": "Бумажные полотенца",
+      "count": 1,
+      "icon": "🧻"
+    },
+    {
+      "id": "ladle",
+      "name": "Половник",
+      "count": 1,
+      "icon": "🥄"
+    },
+    {
+      "id": "stove",
+      "name": "Конфорка",
+      "count": 1,
+      "icon": "🔥"
+    }
+  ],
+  "ingredients": [
+    {
+      "id": "mushrooms",
+      "name": "Шампиньоны нарезанные",
+      "amount": 500,
+      "unit": "g",
+      "icon": "🍄"
+    },
+    {
+      "id": "potatoes",
+      "name": "Картофель средний",
+      "amount": 2,
+      "unit": "pcs",
+      "icon": "🥔"
+    },
+    {
+      "id": "onion",
+      "name": "Репчатый лук",
+      "amount": 1,
+      "unit": "pcs",
+      "icon": "🧅"
+    },
+    {
+      "id": "garlic",
+      "name": "Чеснок, зубчики",
+      "amount": 2,
+      "unit": "pcs",
+      "icon": "🧄"
+    },
+    {
+      "id": "butter",
+      "name": "Сливочное масло",
+      "amount": 30,
+      "unit": "g",
+      "icon": "🧈"
+    },
+    {
+      "id": "cream",
+      "name": "Сливки 20%",
+      "amount": 200,
+      "unit": "ml",
+      "icon": "🥛"
+    },
+    {
+      "id": "water",
+      "name": "Вода",
+      "amount": 700,
+      "unit": "ml",
+      "icon": "💧"
+    },
+    {
+      "id": "cube",
+      "name": "Овощной бульонный кубик (10 г)",
+      "amount": 1,
+      "unit": "pcs",
+      "icon": "🟨"
+    },
+    {
+      "id": "pepper",
+      "name": "Чёрный перец молотый",
+      "amount": 0.25,
+      "unit": "tsp",
+      "icon": "🌶️"
+    },
+    {
+      "id": "thyme",
+      "name": "Тимьян (kakukkfű)",
+      "amount": 2,
+      "unit": "pinch",
+      "optional": true,
+      "icon": "🌿"
+    },
+    {
+      "id": "salt",
+      "name": "Соль",
+      "amount": null,
+      "unit": "to_taste",
+      "note": "Кубик уже солёный — только после пробы",
+      "icon": "🧂"
+    },
+    {
+      "id": "croutons",
+      "name": "Готовые сухарики",
+      "amount": 1,
+      "unit": "handful",
+      "optional": true,
+      "icon": "🍞"
+    },
+    {
+      "id": "parsley",
+      "name": "Петрушка",
+      "amount": 0.5,
+      "unit": "bunch",
+      "optional": true,
+      "icon": "🌿"
+    }
+  ],
+  "fallback_tasks": [
+    {
+      "id": "wash_dishes",
+      "title": "Помыть освободившуюся посуду",
+      "technique": "wash_dishes"
+    },
+    {
+      "id": "wipe_surfaces",
+      "title": "Протереть стол и разделочную зону",
+      "technique": "wipe_surfaces"
+    }
+  ],
+  "steps": [
+    {
+      "id": "weigh_mushrooms",
+      "title": "Взвесить грибы",
+      "description": "Поставьте миску на весы, обнулите и отвесьте 500 г нарезанных шампиньонов.",
+      "technique": "weigh_on_scales",
+      "depends_on": [],
+      "resources": [
+        "scales",
+        "bowl"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "peel_onion",
+      "title": "Почистить лук",
+      "description": "Срежьте верхушку и донце, снимите шелуху.",
+      "technique": "peel_onion",
+      "depends_on": [],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "dice_onion",
+      "title": "Нарезать лук",
+      "description": "Разрежьте луковицу пополам и нарежьте мелким кубиком.",
+      "technique": "dice_onion",
+      "depends_on": [
+        "peel_onion"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "peel_garlic",
+      "title": "Почистить чеснок",
+      "description": "Прижмите зубчики плоской стороной ножа и снимите шелуху.",
+      "technique": "peel_garlic",
+      "depends_on": [],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "mince_garlic",
+      "title": "Порубить чеснок",
+      "description": "Мелко порубите чеснок ножом.",
+      "technique": "mince_garlic",
+      "depends_on": [
+        "peel_garlic"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "wash_potatoes",
+      "title": "Помыть картофель",
+      "description": "Помойте картофель под проточной водой, оттирая землю.",
+      "technique": "wash_vegetables",
+      "depends_on": [],
+      "resources": [],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Помойте одну картофелину из двух."
+      }
+    },
+    {
+      "id": "peel_potatoes",
+      "title": "Почистить картофель",
+      "description": "Очистите картофель овощечисткой, вырежьте глазки, сполосните.",
+      "technique": "peel_potato",
+      "depends_on": [
+        "wash_potatoes"
+      ],
+      "resources": [
+        "peeler"
+      ],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Почистите вторую картофелину ножом."
+      }
+    },
+    {
+      "id": "dice_potatoes",
+      "title": "Нарезать картофель",
+      "description": "Нарежьте кубиками примерно 1,5 см, сложите в миску и залейте холодной водой, чтобы не потемнел.",
+      "technique": "dice_potato",
+      "depends_on": [
+        "peel_potatoes"
+      ],
+      "resources": [
+        "board",
+        "knife",
+        "bowl"
+      ],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Нарежьте одну картофелину на второй доске."
+      }
+    },
+    {
+      "id": "wash_parsley",
+      "title": "Помыть петрушку",
+      "description": "Промойте петрушку под холодной водой и стряхните.",
+      "technique": "wash_herbs",
+      "depends_on": [],
+      "resources": [],
+      "kind": "active",
+      "optional_ingredient": "parsley",
+      "help": null
+    },
+    {
+      "id": "chop_parsley",
+      "title": "Порубить петрушку",
+      "description": "Обсушите петрушку полотенцем, оборвите листья и мелко порубите.",
+      "technique": "chop_herbs",
+      "depends_on": [
+        "wash_parsley"
+      ],
+      "resources": [
+        "board",
+        "knife",
+        "towels"
+      ],
+      "kind": "active",
+      "optional_ingredient": "parsley",
+      "help": null
+    },
+    {
+      "id": "fill_kettle",
+      "title": "Набрать воду в чайник",
+      "description": "Налейте в чайник 700 мл воды. Включать пока не нужно: это сделают после того, как обжарится чеснок.",
+      "technique": "fill_kettle",
+      "depends_on": [],
+      "resources": [
+        "kettle"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "melt_butter",
+      "title": "Растопить масло",
+      "description": "Поставьте кастрюлю на средний огонь и положите 30 г масла. Дождитесь, пока оно полностью растает и слегка запенится.",
+      "technique": "melt_butter",
+      "depends_on": [
+        "dice_onion"
+      ],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 90,
+        "text": "Масло растаяло? Можно класть лук."
+      },
+      "help": null
+    },
+    {
+      "id": "fry_onion",
+      "title": "Обжарить лук",
+      "description": "Положите лук и жарьте, помешивая лопаткой, пока он не станет мягким и прозрачным. Не давайте ему потемнеть.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "melt_butter",
+        "dice_onion"
+      ],
+      "resources": [
+        "pot",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 300,
+        "text": "Проверьте лук — если прозрачный, переходите дальше."
+      },
+      "help": null
+    },
+    {
+      "id": "fry_garlic",
+      "title": "Добавить чеснок",
+      "description": "Добавьте чеснок и жарьте, помешивая, до появления аромата. Чеснок легко пригорает — не отходите.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "fry_onion",
+        "mince_garlic"
+      ],
+      "resources": [
+        "pot",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 60,
+        "text": "Чеснок пахнет? Пора добавлять грибы."
+      },
+      "help": null
+    },
+    {
+      "id": "switch_on_kettle",
+      "title": "Включить чайник",
+      "description": "Включите чайник, чтобы к концу обжарки грибов вода вскипела.",
+      "technique": "switch_on_kettle",
+      "depends_on": [
+        "fill_kettle",
+        "fry_garlic"
+      ],
+      "resources": [
+        "kettle"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "fry_mushrooms",
+      "title": "Обжарить грибы",
+      "description": "Прибавьте огонь до средне-сильного, высыпьте грибы и перемешайте. Сначала они дадут много сока — продолжайте жарить, помешивая, пока жидкость не выпарится и грибы не начнут золотиться.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "fry_garlic",
+        "weigh_mushrooms"
+      ],
+      "resources": [
+        "pot",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 720,
+        "text": "Сок выпарился? Если да — заливайте кипятком."
+      },
+      "help": null
+    },
+    {
+      "id": "pour_water",
+      "title": "Залить грибы кипятком",
+      "description": "Аккуратно влейте кипяток из чайника в кастрюлю с обжаренными грибами. Если чайник ещё не вскипел, дождитесь щелчка.",
+      "technique": "pour_liquid",
+      "depends_on": [
+        "fry_mushrooms",
+        "switch_on_kettle"
+      ],
+      "resources": [
+        "pot",
+        "kettle"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "dissolve_cube",
+      "title": "Растворить кубик",
+      "description": "Раскрошите кубик пальцами прямо в кастрюлю и перемешайте до растворения.",
+      "technique": "crumble_stir",
+      "depends_on": [
+        "pour_water"
+      ],
+      "resources": [
+        "pot",
+        "spatula"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "drain_potatoes",
+      "title": "Слить воду с картофеля",
+      "description": "Откиньте картофель на дуршлаг.",
+      "technique": "drain_colander",
+      "depends_on": [
+        "dice_potatoes",
+        "fry_mushrooms"
+      ],
+      "resources": [
+        "colander"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "add_potatoes",
+      "title": "Добавить картофель и тимьян",
+      "description": "Переложите картофель в кастрюлю, добавьте 2 щепотки тимьяна и перемешайте.",
+      "technique": "add_to_pot",
+      "depends_on": [
+        "dissolve_cube",
+        "drain_potatoes"
+      ],
+      "resources": [
+        "pot",
+        "spatula"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "bring_to_boil",
+      "title": "Довести до кипения",
+      "description": "Дождитесь, пока суп закипит, затем убавьте огонь до слабого и накройте крышкой.",
+      "technique": "bring_to_boil",
+      "depends_on": [
+        "add_potatoes"
+      ],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 300,
+        "text": "Закипело? Убавьте огонь и накройте крышкой."
+      },
+      "help": null
+    },
+    {
+      "id": "simmer",
+      "title": "Варить",
+      "description": "Варите под крышкой при лёгком бульканье. Вы свободны — займитесь другим шагом.",
+      "technique": "simmer_covered",
+      "depends_on": [
+        "bring_to_boil"
+      ],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "countdown",
+        "seconds": 1200
+      },
+      "help": null
+    },
+    {
+      "id": "check_potatoes",
+      "title": "Проверить картофель",
+      "description": "Проткните кусочек ножом — он должен легко разваливаться. Если твёрдый, варите ещё 5 минут.",
+      "technique": "test_doneness_knife",
+      "depends_on": [
+        "simmer"
+      ],
+      "resources": [
+        "pot",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "rest_off_heat",
+      "title": "Снять с огня",
+      "description": "Снимите кастрюлю с огня и дайте постоять, чтобы суп меньше брызгал при пюрировании.",
+      "technique": "remove_from_heat",
+      "depends_on": [
+        "check_potatoes"
+      ],
+      "resources": [
+        "pot"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "countdown",
+        "seconds": 180
+      },
+      "help": null
+    },
+    {
+      "id": "blend",
+      "title": "Пюрировать",
+      "description": "Опустите блендер до дна и только потом включайте. Пробивайте, медленно водя по кастрюле, пока суп не станет однородным.",
+      "technique": "immersion_blend",
+      "depends_on": [
+        "rest_off_heat"
+      ],
+      "resources": [
+        "pot",
+        "blender"
+      ],
+      "kind": "active",
+      "help": {
+        "type": "assist",
+        "text": "Придержите кастрюлю за ручки, чтобы не ездила."
+      }
+    },
+    {
+      "id": "add_cream",
+      "title": "Влить сливки",
+      "description": "Верните кастрюлю на слабый огонь. Влейте 200 мл сливок, добавьте ¼ ч. л. перца и перемешайте.",
+      "technique": "pour_cream_stir",
+      "depends_on": [
+        "blend"
+      ],
+      "resources": [
+        "pot",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "heat_cream",
+      "title": "Прогреть",
+      "description": "Прогрейте, помешивая, не доводя до кипения — иначе сливки могут свернуться.",
+      "technique": "stir_gently",
+      "depends_on": [
+        "add_cream"
+      ],
+      "resources": [
+        "pot",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "countdown",
+        "seconds": 180
+      },
+      "help": null
+    },
+    {
+      "id": "taste_salt",
+      "title": "Попробовать и посолить",
+      "description": "Попробуйте суп. Кубик уже солёный — солите только если не хватает, по щепотке, пробуя снова.",
+      "technique": "taste_adjust",
+      "depends_on": [
+        "heat_cream"
+      ],
+      "resources": [
+        "pot"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "set_table",
+      "title": "Накрыть на стол",
+      "description": "Поставьте тарелки и ложки, выложите сухарики в миску.",
+      "technique": "set_table",
+      "depends_on": [],
+      "resources": [
+        "bowl"
+      ],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Разложите ложки и салфетки."
+      }
+    },
+    {
+      "id": "serve",
+      "title": "Подать",
+      "description": "Разлейте суп половником по тарелкам, сверху положите сухарики и посыпьте петрушкой.",
+      "technique": "ladle_serve",
+      "depends_on": [
+        "taste_salt",
+        "set_table",
+        "chop_parsley"
+      ],
+      "resources": [
+        "ladle"
+      ],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Посыпьте тарелки сухариками и петрушкой."
+      }
+    }
+  ]
+}

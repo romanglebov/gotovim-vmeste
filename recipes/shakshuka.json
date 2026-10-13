@@ -1,0 +1,618 @@
+{
+  "format_version": 1,
+  "id": "shakshuka",
+  "version": 1,
+  "title": "Шакшука",
+  "image": "images/shakshuka.svg",
+  "icon": "🍳",
+  "base_servings": 2,
+  "players": {
+    "min": 1,
+    "max": 3
+  },
+  "equipment": [
+    {
+      "id": "pan",
+      "name": "Глубокая сковорода 26 см с крышкой",
+      "count": 1,
+      "icon": "🍳"
+    },
+    {
+      "id": "stove",
+      "name": "Конфорка",
+      "count": 1,
+      "icon": "🔥"
+    },
+    {
+      "id": "board",
+      "name": "Разделочная доска",
+      "count": 2,
+      "icon": "🪵"
+    },
+    {
+      "id": "knife",
+      "name": "Нож",
+      "count": 2,
+      "icon": "🔪"
+    },
+    {
+      "id": "spatula",
+      "name": "Деревянная лопатка",
+      "count": 1,
+      "icon": "🥄"
+    },
+    {
+      "id": "spoon",
+      "name": "Столовая ложка",
+      "count": 1,
+      "icon": "🥄"
+    },
+    {
+      "id": "dish",
+      "name": "Блюдце для специй",
+      "count": 1,
+      "icon": "🥣"
+    },
+    {
+      "id": "cups",
+      "name": "Маленькие чашки для яиц",
+      "count": 4,
+      "icon": "☕"
+    },
+    {
+      "id": "opener",
+      "name": "Консервный нож",
+      "count": 1,
+      "icon": "🥫"
+    }
+  ],
+  "ingredients": [
+    {
+      "id": "eggs",
+      "name": "Яйца",
+      "amount": 4,
+      "unit": "pcs",
+      "icon": "🥚"
+    },
+    {
+      "id": "tomatoes",
+      "name": "Томаты в собственном соку",
+      "amount": 400,
+      "unit": "g",
+      "icon": "🥫"
+    },
+    {
+      "id": "paste",
+      "name": "Томатная паста",
+      "amount": 1,
+      "unit": "tbsp",
+      "icon": "🍅"
+    },
+    {
+      "id": "pepper",
+      "name": "Красный сладкий перец",
+      "amount": 1,
+      "unit": "pcs",
+      "icon": "🫑"
+    },
+    {
+      "id": "onion",
+      "name": "Репчатый лук",
+      "amount": 1,
+      "unit": "pcs",
+      "icon": "🧅"
+    },
+    {
+      "id": "garlic",
+      "name": "Чеснок, зубчики",
+      "amount": 2,
+      "unit": "pcs",
+      "icon": "🧄"
+    },
+    {
+      "id": "oil",
+      "name": "Оливковое масло",
+      "amount": 2,
+      "unit": "tbsp",
+      "icon": "🫒"
+    },
+    {
+      "id": "cumin",
+      "name": "Молотый зира (кумин)",
+      "amount": 1,
+      "unit": "tsp",
+      "icon": "🟤"
+    },
+    {
+      "id": "paprika",
+      "name": "Сладкая паприка",
+      "amount": 1,
+      "unit": "tsp",
+      "icon": "🌶️"
+    },
+    {
+      "id": "chili",
+      "name": "Хлопья чили",
+      "amount": 1,
+      "unit": "pinch",
+      "icon": "🌶️",
+      "optional": true
+    },
+    {
+      "id": "salt",
+      "name": "Соль",
+      "amount": 0.5,
+      "unit": "tsp",
+      "icon": "🧂"
+    },
+    {
+      "id": "blackpep",
+      "name": "Чёрный перец молотый",
+      "amount": 1,
+      "unit": "pinch",
+      "icon": "⚫"
+    },
+    {
+      "id": "herbs",
+      "name": "Петрушка или кинза",
+      "amount": 0.5,
+      "unit": "bunch",
+      "icon": "🌿"
+    },
+    {
+      "id": "feta",
+      "name": "Фета",
+      "amount": 50,
+      "unit": "g",
+      "icon": "🧀",
+      "optional": true
+    },
+    {
+      "id": "bread",
+      "name": "Хлеб или пита",
+      "amount": 4,
+      "unit": "pcs",
+      "icon": "🍞"
+    }
+  ],
+  "fallback_tasks": [
+    {
+      "id": "wash_dishes",
+      "title": "Помыть освободившуюся посуду",
+      "technique": "wash_dishes"
+    },
+    {
+      "id": "wipe_surfaces",
+      "title": "Протереть стол и разделочную зону",
+      "technique": "wipe_surfaces"
+    }
+  ],
+  "steps": [
+    {
+      "id": "peel_onion",
+      "title": "Почистить лук",
+      "description": "Срежьте у луковицы верхушку и донце, снимите шелуху.",
+      "technique": "peel_onion",
+      "depends_on": [],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "dice_onion",
+      "title": "Нарезать лук",
+      "description": "Разрежьте луковицу пополам и нарежьте мелким кубиком.",
+      "technique": "dice_onion",
+      "depends_on": [
+        "peel_onion"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "wash_pepper",
+      "title": "Помыть перец",
+      "description": "Помойте сладкий перец под холодной водой и вытрите.",
+      "technique": "wash_vegetables",
+      "depends_on": [],
+      "resources": [],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "seed_pepper",
+      "title": "Удалить семена из перца",
+      "description": "Разрежьте перец пополам, вырежьте плодоножку, семена и белые перегородки.",
+      "technique": "seed_pepper",
+      "depends_on": [
+        "wash_pepper"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "slice_pepper",
+      "title": "Нарезать перец",
+      "description": "Нарежьте перец тонкими полосками длиной 3–4 см.",
+      "technique": "slice_pepper",
+      "depends_on": [
+        "seed_pepper"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Нарежьте вторую половинку перца на другой доске."
+      }
+    },
+    {
+      "id": "peel_garlic",
+      "title": "Почистить чеснок",
+      "description": "Прижмите зубчики плоской стороной ножа и снимите шелуху.",
+      "technique": "peel_garlic",
+      "depends_on": [],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "mince_garlic",
+      "title": "Порубить чеснок",
+      "description": "Мелко порубите чеснок ножом.",
+      "technique": "mince_garlic",
+      "depends_on": [
+        "peel_garlic"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "measure_spices",
+      "title": "Отмерить специи",
+      "description": "Насыпьте на блюдце 1 ч. л. зиры, 1 ч. л. сладкой паприки и, если любите остроту, щепотку хлопьев чили.",
+      "technique": "measure_spices",
+      "depends_on": [],
+      "resources": [
+        "dish"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "open_tomatoes",
+      "title": "Открыть томаты",
+      "description": "Откройте банку томатов консервным ножом и поставьте рядом с плитой.",
+      "technique": "open_can",
+      "depends_on": [],
+      "resources": [
+        "opener"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "crack_eggs",
+      "title": "Разбить яйца по чашкам",
+      "description": "Разбейте каждое яйцо в отдельную маленькую чашку. Так их будет легко аккуратно выложить в соус, а скорлупа не попадёт в сковороду.",
+      "technique": "crack_egg",
+      "depends_on": [],
+      "resources": [
+        "cups"
+      ],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Разбейте два яйца из четырёх."
+      }
+    },
+    {
+      "id": "wash_herbs",
+      "title": "Помыть зелень",
+      "description": "Промойте петрушку или кинзу под холодной водой и стряхните.",
+      "technique": "wash_herbs",
+      "depends_on": [],
+      "resources": [],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "chop_herbs",
+      "title": "Порубить зелень",
+      "description": "Обсушите зелень полотенцем, оборвите листья и крупно порубите.",
+      "technique": "chop_herbs",
+      "depends_on": [
+        "wash_herbs"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "crumble_feta",
+      "title": "Раскрошить фету",
+      "description": "Раскрошите фету пальцами в миску. Если феты нет, просто отметьте шаг.",
+      "technique": "crumble_cheese",
+      "depends_on": [],
+      "resources": [],
+      "kind": "active",
+      "optional_ingredient": "feta",
+      "help": null
+    },
+    {
+      "id": "heat_oil",
+      "title": "Разогреть масло",
+      "description": "Поставьте сковороду на средний огонь и налейте 2 ст. л. оливкового масла.",
+      "technique": "heat_oil",
+      "depends_on": [
+        "dice_onion"
+      ],
+      "resources": [
+        "pan",
+        "stove"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 60,
+        "text": "Масло нагрелось? Кладите лук."
+      },
+      "help": null
+    },
+    {
+      "id": "fry_onion",
+      "title": "Обжарить лук",
+      "description": "Положите лук и жарьте, помешивая лопаткой, пока он не станет мягким и прозрачным.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "heat_oil"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 300,
+        "text": "Лук прозрачный? Можно добавлять перец."
+      },
+      "help": null
+    },
+    {
+      "id": "fry_pepper",
+      "title": "Обжарить перец",
+      "description": "Добавьте перец к луку и жарьте, помешивая, пока он не станет мягким.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "fry_onion",
+        "slice_pepper"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 360,
+        "text": "Перец мягкий? Пора добавлять чеснок и специи."
+      },
+      "help": null
+    },
+    {
+      "id": "bloom_spices",
+      "title": "Добавить чеснок и специи",
+      "description": "Высыпьте в сковороду чеснок и специи с блюдца. Жарьте, постоянно помешивая, пока не почувствуете яркий аромат. Специи легко пригорают, не отходите.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "fry_pepper",
+        "mince_garlic",
+        "measure_spices"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 45,
+        "text": "Пахнет специями? Сразу добавляйте томатную пасту."
+      },
+      "help": null
+    },
+    {
+      "id": "add_paste",
+      "title": "Добавить томатную пасту",
+      "description": "Добавьте 1 ст. л. томатной пасты и жарьте, помешивая, 1 минуту, чтобы она слегка потемнела.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "bloom_spices"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "countdown",
+        "seconds": 60
+      },
+      "help": null
+    },
+    {
+      "id": "add_tomatoes",
+      "title": "Влить томаты",
+      "description": "Вылейте томаты в сковороду, разомните их лопаткой. Добавьте ½ ч. л. соли и щепотку чёрного перца, перемешайте.",
+      "technique": "crush_tomatoes",
+      "depends_on": [
+        "add_paste",
+        "open_tomatoes"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "simmer_sauce",
+      "title": "Соус уваривается",
+      "description": "Соус тушится на слабо-среднем огне без крышки, пока не загустеет.",
+      "technique": "simmer_uncovered",
+      "depends_on": [
+        "add_tomatoes"
+      ],
+      "resources": [
+        "pan",
+        "stove"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 600,
+        "text": "Соус загустел? Если ложка оставляет след, можно класть яйца."
+      },
+      "help": null
+    },
+    {
+      "id": "taste_sauce",
+      "title": "Попробовать соус",
+      "description": "Попробуйте соус. Если нужно, досолите. Яйца солить отдельно не будем, поэтому соус должен быть чуть солонее, чем кажется правильным.",
+      "technique": "taste_adjust",
+      "depends_on": [
+        "simmer_sauce"
+      ],
+      "resources": [
+        "pan",
+        "spoon"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "make_wells",
+      "title": "Сделать углубления",
+      "description": "Убавьте огонь до слабого. Тыльной стороной ложки сделайте в соусе 4 углубления на равном расстоянии.",
+      "technique": "make_wells",
+      "depends_on": [
+        "taste_sauce"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spoon"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "add_eggs",
+      "title": "Выложить яйца",
+      "description": "Аккуратно вылейте по одному яйцу из чашки в каждое углубление, стараясь не повредить желток.",
+      "technique": "slide_egg",
+      "depends_on": [
+        "make_wells",
+        "crack_eggs"
+      ],
+      "resources": [
+        "pan",
+        "stove"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "cook_eggs",
+      "title": "Яйца готовятся под крышкой",
+      "description": "Накройте сковороду крышкой. Яйца готовятся на слабом огне, пока белок не станет белым, а желток останется жидким.",
+      "technique": "cook_covered",
+      "depends_on": [
+        "add_eggs"
+      ],
+      "resources": [
+        "pan",
+        "stove"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 360,
+        "text": "Белок побелел, а желток ещё дрожит? Снимайте с огня."
+      },
+      "help": null
+    },
+    {
+      "id": "slice_bread",
+      "title": "Нарезать хлеб",
+      "description": "Нарежьте хлеб ломтями или разрежьте питы пополам.",
+      "technique": "slice_bread",
+      "depends_on": [],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "set_table",
+      "title": "Накрыть на стол",
+      "description": "Положите на стол подставку под горячее, тарелки, вилки и хлеб. Шакшуку подают прямо в сковороде.",
+      "technique": "set_table",
+      "depends_on": [
+        "slice_bread"
+      ],
+      "resources": [],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "serve",
+      "title": "Подать",
+      "description": "Поставьте сковороду на подставку. Посыпьте шакшуку зеленью и фетой.",
+      "technique": "garnish_serve",
+      "depends_on": [
+        "cook_eggs",
+        "chop_herbs",
+        "crumble_feta",
+        "set_table"
+      ],
+      "resources": [
+        "pan"
+      ],
+      "kind": "active",
+      "help": null
+    }
+  ]
+}

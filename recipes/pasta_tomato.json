@@ -1,0 +1,401 @@
+{
+  "format_version": 1,
+  "id": "pasta_tomato",
+  "version": 2,
+  "title": "Паста с томатным соусом",
+  "image": "images/pasta_tomato.svg",
+  "icon": "🍝",
+  "base_servings": 3,
+  "players": {
+    "min": 1,
+    "max": 3
+  },
+  "equipment": [
+    {
+      "id": "pot",
+      "name": "Большая кастрюля 4–5 л с крышкой",
+      "count": 1,
+      "icon": "🍲"
+    },
+    {
+      "id": "pan",
+      "name": "Сковорода",
+      "count": 1,
+      "icon": "🍳"
+    },
+    {
+      "id": "stove",
+      "name": "Конфорка",
+      "count": 2,
+      "icon": "🔥"
+    },
+    {
+      "id": "board",
+      "name": "Разделочная доска",
+      "count": 2,
+      "icon": "🪵"
+    },
+    {
+      "id": "knife",
+      "name": "Нож",
+      "count": 2,
+      "icon": "🔪"
+    },
+    {
+      "id": "grater",
+      "name": "Тёрка",
+      "count": 1,
+      "icon": "🧀"
+    },
+    {
+      "id": "spatula",
+      "name": "Лопатка",
+      "count": 1,
+      "icon": "🥄"
+    },
+    {
+      "id": "colander",
+      "name": "Дуршлаг",
+      "count": 1,
+      "icon": "🥣"
+    },
+    {
+      "id": "mug",
+      "name": "Кружка",
+      "count": 1,
+      "icon": "☕"
+    }
+  ],
+  "ingredients": [
+    {
+      "id": "spaghetti",
+      "name": "Спагетти",
+      "amount": 300,
+      "unit": "g",
+      "icon": "🍝"
+    },
+    {
+      "id": "tomatoes",
+      "name": "Томаты в собственном соку",
+      "amount": 400,
+      "unit": "g",
+      "icon": "🥫"
+    },
+    {
+      "id": "garlic",
+      "name": "Чеснок, зубчики",
+      "amount": 3,
+      "unit": "pcs",
+      "icon": "🧄"
+    },
+    {
+      "id": "oil",
+      "name": "Оливковое масло",
+      "amount": 3,
+      "unit": "tbsp",
+      "icon": "🫒"
+    },
+    {
+      "id": "salt",
+      "name": "Соль",
+      "amount": 1,
+      "unit": "tbsp",
+      "icon": "🧂"
+    },
+    {
+      "id": "sugar",
+      "name": "Сахар",
+      "amount": 1,
+      "unit": "pinch",
+      "icon": "🍬"
+    },
+    {
+      "id": "cheese",
+      "name": "Пармезан",
+      "amount": 50,
+      "unit": "g",
+      "icon": "🧀"
+    },
+    {
+      "id": "basil",
+      "name": "Базилик",
+      "amount": 0.5,
+      "unit": "bunch",
+      "optional": true,
+      "icon": "🌿"
+    }
+  ],
+  "fallback_tasks": [
+    {
+      "id": "wash_dishes",
+      "title": "Помыть освободившуюся посуду",
+      "technique": "wash_dishes"
+    },
+    {
+      "id": "wipe_surfaces",
+      "title": "Протереть стол и разделочную зону",
+      "technique": "wipe_surfaces"
+    }
+  ],
+  "steps": [
+    {
+      "id": "fill_pot",
+      "title": "Поставить кастрюлю с водой",
+      "description": "Налейте в большую кастрюлю 3 л воды, накройте крышкой и поставьте на сильный огонь. Вода для пасты закипает долго, поэтому её ставят первой, пока готовится соус.",
+      "technique": "fill_pot",
+      "depends_on": [],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "wait_boil",
+      "title": "Вода закипает",
+      "description": "Ждём, пока вода закипит.",
+      "technique": "bring_to_boil",
+      "depends_on": [
+        "fill_pot"
+      ],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 480,
+        "text": "Вода кипит? Можно солить и закладывать пасту."
+      },
+      "help": null
+    },
+    {
+      "id": "peel_garlic",
+      "title": "Почистить чеснок",
+      "description": "Прижмите зубчики плоской стороной ножа и снимите шелуху.",
+      "technique": "peel_garlic",
+      "depends_on": [],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "slice_garlic",
+      "title": "Нарезать чеснок",
+      "description": "Нарежьте чеснок тонкими пластинками.",
+      "technique": "slice_garlic",
+      "depends_on": [
+        "peel_garlic"
+      ],
+      "resources": [
+        "board",
+        "knife"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "grate_cheese",
+      "title": "Натереть сыр",
+      "description": "Натрите пармезан на мелкой тёрке в миску.",
+      "technique": "grate_cheese",
+      "depends_on": [],
+      "resources": [
+        "grater"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "prep_basil",
+      "title": "Подготовить базилик",
+      "description": "Промойте базилик, стряхните воду и оборвите листья.",
+      "technique": "wash_herbs",
+      "depends_on": [],
+      "resources": [],
+      "kind": "active",
+      "optional_ingredient": "basil",
+      "help": null
+    },
+    {
+      "id": "heat_oil",
+      "title": "Разогреть масло",
+      "description": "Поставьте сковороду на средний огонь и налейте 3 ст. л. оливкового масла.",
+      "technique": "heat_oil",
+      "depends_on": [
+        "slice_garlic"
+      ],
+      "resources": [
+        "pan",
+        "stove"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 60,
+        "text": "Масло нагрелось? Кладите чеснок."
+      },
+      "help": null
+    },
+    {
+      "id": "fry_garlic",
+      "title": "Обжарить чеснок",
+      "description": "Положите чеснок и жарьте, помешивая, пока он не станет светло-золотистым. Не дайте ему потемнеть.",
+      "technique": "saute_stir",
+      "depends_on": [
+        "heat_oil"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "reminder",
+        "after_seconds": 60,
+        "text": "Чеснок золотистый? Пора добавлять томаты."
+      },
+      "help": null
+    },
+    {
+      "id": "add_tomatoes",
+      "title": "Добавить томаты",
+      "description": "Вылейте томаты в сковороду, добавьте щепотку сахара и щепотку соли. Разомните помидоры лопаткой.",
+      "technique": "crush_tomatoes",
+      "depends_on": [
+        "fry_garlic"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "simmer_sauce",
+      "title": "Соус томится",
+      "description": "Соус тушится на слабом огне без крышки.",
+      "technique": "simmer_uncovered",
+      "depends_on": [
+        "add_tomatoes"
+      ],
+      "resources": [
+        "pan",
+        "stove"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "countdown",
+        "seconds": 600
+      },
+      "help": null
+    },
+    {
+      "id": "add_pasta",
+      "title": "Заложить пасту",
+      "description": "Посолите кипящую воду (1 ст. л.), заложите спагетти и перемешайте, чтобы не слиплись.",
+      "technique": "add_pasta",
+      "depends_on": [
+        "wait_boil"
+      ],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "cook_pasta",
+      "title": "Паста варится",
+      "description": "Спагетти варятся при сильном кипении.",
+      "technique": "boil_pasta",
+      "depends_on": [
+        "add_pasta"
+      ],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "kind": "waiting",
+      "timer": {
+        "type": "countdown",
+        "seconds": 480
+      },
+      "help": null
+    },
+    {
+      "id": "drain_pasta",
+      "title": "Слить пасту",
+      "description": "Зачерпните кружку воды от варки и отставьте. Откиньте спагетти на дуршлаг.",
+      "technique": "drain_colander",
+      "depends_on": [
+        "cook_pasta"
+      ],
+      "resources": [
+        "pot",
+        "colander",
+        "mug"
+      ],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "mix",
+      "title": "Соединить с соусом",
+      "description": "Переложите спагетти в сковороду с соусом, влейте немного воды от варки и перемешайте на огне 1 минуту.",
+      "technique": "toss_pasta",
+      "depends_on": [
+        "drain_pasta",
+        "simmer_sauce"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "kind": "active",
+      "timer": {
+        "type": "countdown",
+        "seconds": 60
+      },
+      "help": null
+    },
+    {
+      "id": "set_table",
+      "title": "Накрыть на стол",
+      "description": "Поставьте тарелки и вилки.",
+      "technique": "set_table",
+      "depends_on": [],
+      "resources": [],
+      "kind": "active",
+      "help": null
+    },
+    {
+      "id": "serve",
+      "title": "Подать",
+      "description": "Разложите пасту по тарелкам, посыпьте сыром и листьями базилика.",
+      "technique": "plate_pasta",
+      "depends_on": [
+        "mix",
+        "set_table",
+        "grate_cheese",
+        "prep_basil"
+      ],
+      "resources": [],
+      "kind": "active",
+      "help": {
+        "type": "split",
+        "text": "Посыпьте тарелки сыром и базиликом."
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "format_version": 1,
+  "recipes": [
+    "mushroom_soup.json",
+    "pasta_tomato.json",
+    "shakshuka.json"
+  ]
+}
