@@ -95,6 +95,10 @@ body.moving,body.moving *{cursor:grabbing !important}
 .ing{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px;text-align:center;background:#FBFAF7}
 .ing .pi{font-size:26px}
 .ing .pn{font-size:11px}
+.ing.free{background:transparent;box-shadow:none;outline:2px dashed var(--wire-soft);outline-offset:-2px}
+.ing.free:hover{outline-color:var(--ink)}
+.ing.free.sel{outline:none;box-shadow:0 0 0 3px var(--ink);background:#FBFAF7}
+.ing.free .port{opacity:1}
 .dish{background:var(--tram);box-shadow:0 0 0 2px var(--ink);border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .dish.sel{box-shadow:0 0 0 4px var(--ink)}
 .dp{flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#fff;display:grid;place-items:center}

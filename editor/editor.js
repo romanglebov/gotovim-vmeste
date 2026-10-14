@@ -61,11 +61,37 @@ function needs(from, to) {
 
 /* ---------------- history and saving ---------------- */
 
-function commit(fn) {
+// pin: first nail every tile to where it stands now, so that removing tiles does not move the others.
+function commit(fn, pin = false) {
   hist.push(JSON.stringify(R)); if (hist.length > 200) hist.shift();
   fut = []; typing = null;
+  const before = layout();
+  if (pin) { const pos = positions(); for (const n of before.nodes) if (!pos[n.key]) pos[n.key] = [Math.round(n.x), Math.round(n.y)]; }
   fn();
+  settle(before);
   saved(); render();
+}
+/** Tiles that appeared with an edit stand where it makes sense, not somewhere new:
+    a product that lost its last step stays exactly where its tile was; a hanging product, once linked, stays where it hung;
+    a new step next to its neighbour, even if that neighbour was moved by hand. */
+function settle(before) {
+  const after = layout(), had = before.byKey, pos = positions(), set = (n, x, y) => { pos[n.key] = [Math.round(x), Math.round(y)]; n.x = x; n.y = y; n.pinned = true; };
+  for (const n of after.nodes) {
+    if (had[n.key] || n.pinned) continue;
+    if (n.kind === 'ing') {
+      const old = n.free ? before.nodes.find(o => o.kind === 'ing' && o.id === n.id && !o.free) : had['ing:' + n.id];
+      if (old) { set(n, old.x, old.y); continue; }
+    }
+    // Next to the tile it feeds, at the nearest free spot to its left.
+    const p = n.parent;
+    if (!p || !p.pinned) continue;
+    const x = n.ax + p.x - p.ax, y0 = p.y + p.h / 2 - n.h / 2;
+    const free = y => !after.nodes.some(o => o !== n && o.x < x + n.w + 8 && o.x + o.w + 8 > x && o.y < y + n.h + 8 && o.y + o.h + 8 > y);
+    let y = y0;
+    for (let i = 1; i < 60 && !free(y); i++) y = y0 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * ROWH;
+    set(n, x, y);
+  }
+  if (!Object.keys(pos).length) { delete R.editor.positions; if (!Object.keys(R.editor).length) delete R.editor; }
 }
 function undo() {
   if (!hist.length) return;
@@ -214,21 +240,25 @@ function layout() {
   };
   const dish = { key: 'dish', kind: 'dish', col: 0, kids: kids.dish.map(build) };
   let row = 0;
-  const place = n => {
+  const place = (n, parent) => {
+    n.parent = parent || null;
     nodes.push(n);
     if (!n.kids.length) { n.row = row++; return; }
-    n.kids.forEach(place);
+    n.kids.forEach(k => place(k, n));
     n.row = (n.kids[0].row + n.kids[n.kids.length - 1].row) / 2;
   };
   place(dish);
   if (!dish.kids.length) dish.row = 0, row = 1;
   const minCol = Math.min(0, ...nodes.map(n => n.col));
+  // Products that no step uses yet hang on their own, unconnected, under the tree.
+  const used = new Set(steps.flatMap(s => s.ingredients));
+  for (const i of R.ingredients) if (!used.has(i.id)) nodes.push({ key: 'ing:' + i.id, kind: 'ing', id: i.id, step: null, free: true, col: minCol, row: row++, kids: [], parent: null });
   for (const n of nodes) {
     n.w = n.kind === 'dish' ? DISHW : n.kind === 'ing' ? TILE : STEPW;
     n.h = n.kind === 'dish' ? DISHH : TILE;
     const colX = PAD + (n.col - minCol) * COLW;
     n.x = n.kind === 'ing' ? colX + STEPW - TILE : colX;
-    n.cy = PAD + n.row * ROWH + TILE / 2;
+    n.cy = Math.round(PAD + n.row * ROWH + TILE / 2); // whole pixels, so a tile nailed down where it stands does not budge
     n.y = n.cy - n.h / 2;
   }
   const byKey = Object.fromEntries(nodes.map(n => [n.key, n]));
@@ -238,9 +268,9 @@ function layout() {
     if (parent[d] !== s.id && byKey['step:' + d]) edges.push({ key: `dep:${d}>${s.id}`, from: byKey['step:' + d], to: byKey['step:' + s.id], kind: 'far' });
   }
   const top = Math.min(...nodes.map(n => n.y)), shift = top < PAD ? PAD - top : 0;
-  nodes.forEach(n => { n.y += shift; n.cy += shift; });
+  nodes.forEach(n => { n.y += shift; n.cy += shift; n.ax = n.x; n.ay = n.y; });
   const pos = (R.editor && R.editor.positions) || {};
-  for (const n of nodes) { const p = pos[n.key]; if (p) { n.x = p[0]; n.y = p[1]; n.cy = n.y + n.h / 2; } }
+  for (const n of nodes) { const p = pos[n.key]; if (p) { n.x = p[0]; n.y = p[1]; n.cy = n.y + n.h / 2; n.pinned = true; } }
   const x1 = Math.min(...nodes.map(n => n.x)), y1 = Math.min(...nodes.map(n => n.y));
   const x2 = Math.max(...nodes.map(n => n.x + n.w)), y2 = Math.max(...nodes.map(n => n.y + n.h));
   return { nodes, edges, byKey, box: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 } };
@@ -322,7 +352,7 @@ function renderCanvas() {
     }
     if (n.kind === 'ing') {
       const i = I(n.id);
-      return `<div class="node ing ${on1(n) ? 'sel' : ''}" data-node="ing:${esc(n.id)}" data-key="${esc(n.key)}" style="${pos}" title="${esc(i.name)}">
+      return `<div class="node ing ${n.free ? 'free' : ''} ${on1(n) ? 'sel' : ''}" data-node="ing:${esc(n.id)}" data-key="${esc(n.key)}" style="${pos}" title="${esc(i.name)}${n.free ? ' — не входит ни в один шаг. Потяните от кружка к шагу.' : ''}">
         <span class="pi">${esc(i.icon || '🥕')}</span><span class="pn">${esc(i.name)}</span><span class="pa">${esc(amountText(i))}</span>
         <span class="port" data-port="ing:${esc(n.id)}" title="Потяните к шагу, где этот продукт тоже нужен"></span></div>`;
     }
@@ -371,7 +401,8 @@ function renderInsp() {
 function inspMulti() {
   return `<h2 class="ph">Выбрано плиток: ${picked.size}</h2>
     <p class="fh">Перетащите любую из них — сдвинутся все вместе. Shift+щелчок добавляет плитку к выбору или убирает её.</p>
-    <div class="row"><button class="tb" data-act="unplace">Вернуть на свои места</button></div>`;
+    <div class="row"><button class="tb" data-act="unplace">Вернуть на свои места</button></div>
+    <button class="danger" data-act="delpicked">Удалить выбранные</button>`;
 }
 
 function inspRecipe() {
@@ -460,6 +491,17 @@ function renameId(t, el) {
   const taken = sel.kind === 'step' ? stepIds() : sel.kind === 'ing' ? new Set(R.ingredients.map(i => i.id)) : sel.kind === 'eq' ? new Set(R.equipment.map(e => e.id)) : new Set();
   if (taken.has(nid)) { toast(`Имя «${nid}» уже занято.`); el.value = old; return false; }
   t.id = nid;
+  // Tiles keep their places under the new name.
+  const pos = R.editor && R.editor.positions;
+  if (pos && (sel.kind === 'step' || sel.kind === 'ing')) for (const k of Object.keys(pos)) {
+    const m = k.match(/^(step|ing):([^@]+)(?:@(.+))?$/); if (!m) continue;
+    let [, kind, a, b] = m;
+    if (sel.kind === 'step' && kind === 'step' && a === old) a = nid;
+    else if (sel.kind === 'step' && kind === 'ing' && b === old) b = nid;
+    else if (sel.kind === 'ing' && kind === 'ing' && a === old) a = nid;
+    else continue;
+    pos[`${kind}:${a}${b ? '@' + b : ''}`] = pos[k]; delete pos[k];
+  }
   for (const s of R.steps) {
     if (sel.kind === 'step') s.depends_on = s.depends_on.map(d => (d === old ? nid : d));
     if (sel.kind === 'ing') s.ingredients = s.ingredients.map(d => (d === old ? nid : d));
@@ -479,7 +521,7 @@ function pickedToSel() {
   if (picked.size > 1) { sel = { kind: 'multi' }; return; }
   if (!picked.size) { sel = { kind: 'recipe' }; return; }
   const k = [...picked][0];
-  sel = k === 'dish' ? { kind: 'recipe' } : k.startsWith('step:') ? { kind: 'step', id: k.slice(5) } : { kind: 'ing', id: k.slice(4, k.indexOf('@')) };
+  sel = k === 'dish' ? { kind: 'recipe' } : k.startsWith('step:') ? { kind: 'step', id: k.slice(5) } : { kind: 'ing', id: k.slice(4).split('@')[0] };
 }
 
 function connect(src, dst) {
@@ -521,14 +563,32 @@ function addStep(before) {
   setTimeout(() => { const t = $('#insp [data-f="title"]'); if (t) { t.focus(); t.select(); } }, 0);
 }
 
-// A removed step is bridged: whatever needed it now needs what it needed.
-function deleteStep(id) {
-  const s = S(id);
+/** Delete tiles: 'step:ID', a product tile 'ing:ID@STEP' or 'ing:ID', or a whole product 'prod:ID'.
+    Only the tiles themselves and their links go; every other tile stays where it is. Steps that fed a removed step
+    become last steps; products of a removed step stay hanging, unconnected, where they were. The dish stays. */
+function deleteKeys(keys) {
+  keys = keys.filter(k => k !== 'dish');
+  if (!keys.length) return toast('Блюдо не удаляется — это корень рецепта.');
   commit(() => {
-    for (const o of R.steps) if (o.depends_on.includes(id)) o.depends_on = [...new Set(o.depends_on.flatMap(d => (d === id ? s.depends_on : [d])))];
-    R.steps = R.steps.filter(o => o.id !== id);
-    sel = { kind: 'recipe' };
-  });
+    const gone = new Set();
+    for (const k of keys) {
+      if (k.startsWith('step:')) {
+        const id = k.slice(5);
+        R.steps = R.steps.filter(o => o.id !== id);
+        for (const o of R.steps) o.depends_on = o.depends_on.filter(d => d !== id);
+      } else if (k.startsWith('prod:')) gone.add(k.slice(5));
+      else if (k.startsWith('ing:')) {
+        const [id, step] = k.slice(4).split('@');
+        if (step && S(step)) S(step).ingredients = S(step).ingredients.filter(i => i !== id);
+        gone.add(id + (step ? '@' : ''));
+      }
+    }
+    const used = new Set(R.steps.flatMap(o => o.ingredients));
+    const drop = new Set([...gone].filter(g => !g.endsWith('@') || !used.has(g.slice(0, -1))).map(g => g.replace(/@$/, '')));
+    R.ingredients = R.ingredients.filter(i => !drop.has(i.id));
+    for (const o of R.steps) o.ingredients = o.ingredients.filter(i => !drop.has(i));
+    picked = new Set(); sel = { kind: 'recipe' }; selEdge = null;
+  }, true);
 }
 
 /* ---------------- input ---------------- */
@@ -570,7 +630,8 @@ document.addEventListener('click', e => {
     case 'cut': return cutEdge(selEdge);
     case 'addbefore': return addStep(id);
     case 'addstep': return addStep(null);
-    case 'delstep': return deleteStep(sel.id);
+    case 'delstep': return deleteKeys(['step:' + sel.id]);
+    case 'delpicked': return deleteKeys([...picked]);
     case 'seling': if (!dragged) select({ kind: 'ing', id }); return;
     case 'seleq': return select({ kind: 'eq', id });
     case 'post': return commit(() => { S(sel.id).station = b.dataset.k; });
@@ -580,7 +641,7 @@ document.addEventListener('click', e => {
     case 'unuse': return commit(() => { const s = S(id); s.ingredients = s.ingredients.filter(x => x !== sel.id); });
     case 'adding': return commit(() => { const nid = uniq('product', new Set(R.ingredients.map(i => i.id))); R.ingredients.push({ id: nid, name: 'Новый продукт', amount: null, unit: 'pcs', icon: '🥕' }); sel = { kind: 'ing', id: nid }; });
     case 'addeq': return commit(() => { const nid = uniq('tool', new Set(R.equipment.map(i => i.id))); R.equipment.push({ id: nid, name: 'Новый инвентарь', count: 1, icon: '🍴' }); sel = { kind: 'eq', id: nid }; });
-    case 'deling': return commit(() => { const x = sel.id; R.ingredients = R.ingredients.filter(i => i.id !== x); R.steps.forEach(s => (s.ingredients = s.ingredients.filter(i => i !== x))); sel = { kind: 'recipe' }; });
+    case 'deling': return deleteKeys(['prod:' + sel.id]);
     case 'deleq': return commit(() => { const x = sel.id; R.equipment = R.equipment.filter(i => i.id !== x); R.steps.forEach(s => (s.resources = s.resources.filter(i => i !== x))); sel = { kind: 'recipe' }; });
   }
 });
@@ -603,11 +664,17 @@ $('#insp').addEventListener('change', e => {
 
 document.addEventListener('keydown', e => {
   const inField = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !inField) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !inField) { e.preventDefault(); redo(); }
-  if ((e.key === 'Delete' || e.key === 'Backspace') && selEdge && !inField) { e.preventDefault(); cutEdge(selEdge); }
+  const ctrl = e.ctrlKey || e.metaKey, key = k => e.code === 'Key' + k.toUpperCase() || e.key.toLowerCase() === k; // works on the Russian layout too
+  if (ctrl && key('z') && !inField) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  if (ctrl && key('y') && !inField) { e.preventDefault(); redo(); }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !inField && R && !drag) {
+    e.preventDefault();
+    if (selEdge) cutEdge(selEdge);
+    else if (picked.size) deleteKeys([...picked]);
+    else if (sel.kind === 'step') deleteKeys(['step:' + sel.id]);
+  }
   if (e.key === 'Escape') { closePop(); if (selEdge || picked.size) { selEdge = null; picked = new Set(); pickedToSel(); render(); } }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !inField && R) { e.preventDefault(); picked = new Set(L.nodes.map(n => n.key)); pickedToSel(); render(); }
+  if (ctrl && key('a') && !inField && R) { e.preventDefault(); picked = new Set(L.nodes.map(n => n.key)); pickedToSel(); render(); }
   if (e.code === 'Space' && !inField && R) { e.preventDefault(); space = true; document.body.classList.add('panready'); }
 });
 document.addEventListener('keyup', e => { if (e.code === 'Space') { space = false; document.body.classList.remove('panready'); } });
@@ -641,6 +708,7 @@ document.addEventListener('pointerdown', e => {
   const key = keyOf(e.target);
   if (key) {
     e.preventDefault();
+    if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) document.activeElement.blur(); // so Delete removes the tile, not a letter
     if (e.shiftKey) return; // Shift+click adds or removes the tile; that happens on click
     if (!picked.has(key)) picked = new Set([key]);
     drag = { mode: 'move', x0: e.clientX, y0: e.clientY, moved: false, snap: JSON.stringify(R),
@@ -839,4 +907,4 @@ if (R) requestAnimationFrame(firstView);
 loadBook().catch(() => {});
 
 // For tests and the console: the exact file "Скачать файл" would save.
-window.receptor = { fileText: () => (R ? fileText() : null), load: o => load(o), center: centerOn, get recipe() { return R; }, get cam() { return { ...cam }; } };
+window.receptor = { fileText: () => (R ? fileText() : null), load: o => load(o), center: centerOn, get recipe() { return R; }, get cam() { return { ...cam }; }, nodes: () => (L ? L.nodes.map(n => ({ key: n.key, x: n.x, y: n.y })) : []) };
