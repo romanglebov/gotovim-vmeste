@@ -176,6 +176,13 @@ test('в рецептах только шаги готовки: ни ожида�
   }
 });
 
+test('каждый продукт идёт в какой-нибудь шаг', () => {
+  for (const r of recipes) {
+    const used = new Set(r.steps.flatMap(s => s.ingredients || []));
+    for (const i of r.ingredients) assert.ok(used.has(i.id), `${r.id}: продукт ${i.id} ни в одном шаге`);
+  }
+});
+
 test('накрыть на стол предлагается последним', () => {
   const { st, ctx } = started(recipes.find(r => r.id === 'mushroom_cream_soup'));
   const list = options(st, ctx, 0).steps;
