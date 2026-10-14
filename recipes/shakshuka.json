@@ -182,6 +182,9 @@
       "station": "board",
       "item": "лук",
       "description": "Срежьте у луковицы верхушку и донце, снимите шелуху. Разрежьте пополам и нарежьте мелким кубиком, около 5 мм.",
+      "ingredients": [
+        "onion"
+      ],
       "technique": "dice_onion",
       "depends_on": [],
       "resources": [
@@ -196,6 +199,9 @@
       "station": "sink",
       "item": "перец",
       "description": "Помойте сладкий перец под холодной водой и вытрите.",
+      "ingredients": [
+        "pepper"
+      ],
       "technique": "wash_vegetables",
       "depends_on": [],
       "resources": [],
@@ -242,6 +248,9 @@
       "station": "board",
       "item": "чеснок",
       "description": "Прижмите зубчики плоской стороной ножа и снимите шелуху.",
+      "ingredients": [
+        "garlic"
+      ],
       "technique": "peel_garlic",
       "depends_on": [],
       "resources": [
@@ -272,6 +281,11 @@
       "station": "counter",
       "item": "специи",
       "description": "Насыпьте на блюдце 1 ч. л. зиры, 1 ч. л. сладкой паприки и, если любите остроту, щепотку хлопьев чили.",
+      "ingredients": [
+        "cumin",
+        "paprika",
+        "chili"
+      ],
       "technique": "measure_spices",
       "depends_on": [],
       "resources": [
@@ -285,6 +299,9 @@
       "station": "counter",
       "item": "томаты",
       "description": "Откройте банку томатов консервным ножом и поставьте рядом с плитой.",
+      "ingredients": [
+        "tomatoes"
+      ],
       "technique": "open_can",
       "depends_on": [],
       "resources": [
@@ -298,6 +315,9 @@
       "station": "counter",
       "item": "яйца",
       "description": "Разбейте каждое яйцо в отдельную маленькую чашку. Так их будет легко аккуратно выложить в соус, а скорлупа не попадёт в сковороду.",
+      "ingredients": [
+        "eggs"
+      ],
       "technique": "crack_egg",
       "depends_on": [],
       "resources": [
@@ -314,6 +334,9 @@
       "station": "sink",
       "item": "зелень",
       "description": "Промойте петрушку или кинзу под холодной водой и стряхните.",
+      "ingredients": [
+        "herbs"
+      ],
       "technique": "wash_herbs",
       "depends_on": [],
       "resources": [],
@@ -341,6 +364,9 @@
       "station": "counter",
       "item": "фета",
       "description": "Раскрошите фету пальцами в миску. Если феты нет, просто отметьте шаг.",
+      "ingredients": [
+        "feta"
+      ],
       "technique": "crumble_cheese",
       "depends_on": [],
       "resources": [],
@@ -353,6 +379,9 @@
       "station": "stove",
       "item": "соус",
       "description": "Поставьте сковороду на средний огонь, налейте 2 ст. л. оливкового масла и прогрейте около минуты, пока оно не станет легко растекаться по дну.",
+      "ingredients": [
+        "oil"
+      ],
       "technique": "heat_oil",
       "depends_on": [
         "dice_onion"
@@ -423,6 +452,9 @@
       "station": "stove",
       "item": "соус",
       "description": "Добавьте 1 ст. л. томатной пасты и жарьте, помешивая, 1 минуту, пока она чуть не потемнеет и не смешается с овощами.",
+      "ingredients": [
+        "paste"
+      ],
       "technique": "saute_stir",
       "depends_on": [
         "bloom_spices"
@@ -440,6 +472,10 @@
       "station": "stove",
       "item": "соус",
       "description": "Вылейте томаты в сковороду и разомните их лопаткой. Добавьте ½ ч. л. соли и щепотку чёрного перца, перемешайте. Тушите на слабо-среднем огне без крышки 8–12 минут, пока соус не загустеет: ложка оставляет след, который не сразу заплывает.",
+      "ingredients": [
+        "salt",
+        "blackpep"
+      ],
       "technique": "simmer_uncovered",
       "depends_on": [
         "add_paste",
@@ -508,6 +544,9 @@
       "station": "board",
       "item": "хлеб",
       "description": "Нарежьте хлеб ломтями или разрежьте питы пополам.",
+      "ingredients": [
+        "bread"
+      ],
       "technique": "slice_bread",
       "depends_on": [],
       "resources": [

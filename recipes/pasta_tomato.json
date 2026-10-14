@@ -146,6 +146,9 @@
       "station": "board",
       "item": "чеснок",
       "description": "Прижмите зубчики плоской стороной ножа и снимите шелуху.",
+      "ingredients": [
+        "garlic"
+      ],
       "technique": "peel_garlic",
       "depends_on": [],
       "resources": [
@@ -176,6 +179,9 @@
       "station": "counter",
       "item": "сыр",
       "description": "Натрите пармезан на мелкой тёрке в миску.",
+      "ingredients": [
+        "cheese"
+      ],
       "technique": "grate_cheese",
       "depends_on": [],
       "resources": [
@@ -189,6 +195,9 @@
       "station": "sink",
       "item": "базилик",
       "description": "Промойте базилик, стряхните воду и оборвите листья.",
+      "ingredients": [
+        "basil"
+      ],
       "technique": "wash_herbs",
       "depends_on": [],
       "resources": [],
@@ -201,6 +210,9 @@
       "station": "stove",
       "item": "соус",
       "description": "Поставьте сковороду на средний огонь, налейте 3 ст. л. оливкового масла и прогрейте около минуты, пока оно не станет легко растекаться по дну.",
+      "ingredients": [
+        "oil"
+      ],
       "technique": "heat_oil",
       "depends_on": [
         "slice_garlic"
@@ -234,6 +246,11 @@
       "station": "stove",
       "item": "соус",
       "description": "Вылейте томаты в сковороду, добавьте щепотку сахара и щепотку соли, разомните помидоры лопаткой. Тушите на слабом огне без крышки 10–15 минут, иногда помешивая, пока соус не загустеет: ложка оставляет на дне след, который не сразу заплывает.",
+      "ingredients": [
+        "tomatoes",
+        "sugar",
+        "salt"
+      ],
       "technique": "simmer_uncovered",
       "depends_on": [
         "fry_garlic"
@@ -251,6 +268,10 @@
       "station": "stove",
       "item": "паста",
       "description": "Когда вода бурно закипит, посолите её (1 ст. л.), заложите спагетти и перемешайте, чтобы не слиплись. Варите при сильном кипении 8–10 минут, иногда помешивая. Попробуйте одну: готовые мягкие, но в середине чуть упругие. Время на пачке — хороший ориентир.",
+      "ingredients": [
+        "spaghetti",
+        "salt"
+      ],
       "technique": "boil_pasta",
       "depends_on": [
         "boil_water"

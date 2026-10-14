@@ -194,6 +194,9 @@
       "station": "counter",
       "item": "грибы",
       "description": "Поставьте миску на весы, обнулите и отвесьте 500 г нарезанных шампиньонов.",
+      "ingredients": [
+        "mushrooms"
+      ],
       "technique": "weigh_on_scales",
       "depends_on": [],
       "resources": [
@@ -208,6 +211,9 @@
       "station": "board",
       "item": "лук",
       "description": "Срежьте у луковицы верхушку и донце, снимите шелуху. Разрежьте пополам и нарежьте мелким кубиком, около 5 мм.",
+      "ingredients": [
+        "onion"
+      ],
       "technique": "dice_onion",
       "depends_on": [],
       "resources": [
@@ -222,6 +228,9 @@
       "station": "board",
       "item": "чеснок",
       "description": "Прижмите зубчики плоской стороной ножа и снимите шелуху.",
+      "ingredients": [
+        "garlic"
+      ],
       "technique": "peel_garlic",
       "depends_on": [],
       "resources": [
@@ -252,6 +261,9 @@
       "station": "sink",
       "item": "картофель",
       "description": "Помойте картофель под проточной водой, очистите овощечисткой, вырежьте глазки и сполосните.",
+      "ingredients": [
+        "potatoes"
+      ],
       "technique": "peel_potato",
       "depends_on": [],
       "resources": [
@@ -288,6 +300,9 @@
       "station": "sink",
       "item": "петрушка",
       "description": "Промойте петрушку под холодной водой и стряхните.",
+      "ingredients": [
+        "parsley"
+      ],
       "technique": "wash_herbs",
       "depends_on": [],
       "resources": [],
@@ -318,6 +333,9 @@
       "station": "sink",
       "item": "вода",
       "description": "Налейте в чайник 700 мл воды. Включать пока не нужно: это сделают после того, как обжарится чеснок.",
+      "ingredients": [
+        "water"
+      ],
       "technique": "fill_kettle",
       "depends_on": [],
       "resources": [
@@ -331,6 +349,9 @@
       "station": "stove",
       "item": "суп",
       "description": "Поставьте кастрюлю на средний огонь и положите 30 г масла. Дождитесь, пока оно полностью растает и слегка запенится.",
+      "ingredients": [
+        "butter"
+      ],
       "technique": "melt_butter",
       "depends_on": [
         "dice_onion"
@@ -434,6 +455,9 @@
       "station": "stove",
       "item": "суп",
       "description": "Раскрошите кубик пальцами прямо в кастрюлю и перемешайте до растворения.",
+      "ingredients": [
+        "cube"
+      ],
       "technique": "crumble_stir",
       "depends_on": [
         "pour_water"
@@ -466,6 +490,9 @@
       "station": "stove",
       "item": "суп",
       "description": "Переложите картофель в кастрюлю, добавьте 2 щепотки тимьяна и перемешайте. Доведите до кипения, убавьте огонь до слабого, накройте крышкой и варите 15–20 минут, пока кусочек картофеля не будет легко протыкаться ножом и разваливаться.",
+      "ingredients": [
+        "thyme"
+      ],
       "technique": "simmer_covered",
       "depends_on": [
         "dissolve_cube",
@@ -503,6 +530,10 @@
       "station": "stove",
       "item": "суп",
       "description": "Верните кастрюлю на слабый огонь. Влейте 200 мл сливок, добавьте ¼ ч. л. перца и перемешайте.",
+      "ingredients": [
+        "cream",
+        "pepper"
+      ],
       "technique": "pour_cream_stir",
       "depends_on": [
         "blend"
@@ -537,6 +568,9 @@
       "station": "stove",
       "item": "суп",
       "description": "Попробуйте суп. Кубик уже солёный — солите только если не хватает, по щепотке, пробуя снова.",
+      "ingredients": [
+        "salt"
+      ],
       "technique": "taste_adjust",
       "depends_on": [
         "heat_cream"
@@ -552,6 +586,9 @@
       "station": "counter",
       "item": "стол",
       "description": "Поставьте тарелки и ложки, выложите сухарики в миску.",
+      "ingredients": [
+        "croutons"
+      ],
       "technique": "set_table",
       "depends_on": [],
       "resources": [
