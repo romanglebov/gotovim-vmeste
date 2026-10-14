@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FFD200">
+<meta name="description" content="Рецептор: графический редактор рецептов для «Готовим вместе». Продукты слева, блюдо справа.">
+<title>Рецептор</title>
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600&family=Unbounded:wght@600;700&display=swap">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="./" aria-label="Рецептор">Рецептор</a>
+  <span class="doc" id="docname"></span>
+  <nav class="tools">
+    <button class="tb" data-act="open" aria-haspopup="dialog">Открыть</button>
+    <button class="tb" data-act="new">Новый</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button class="tb icon" data-act="undo" title="Отменить (Ctrl+Z)" aria-label="Отменить">↶</button>
+    <button class="tb icon" data-act="redo" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть">↷</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button class="check" id="check" data-act="issues"></button>
+    <button class="tb primary" data-act="download">Скачать файл</button>
+  </nav>
+</header>
+
+<main class="work" id="work">
+  <aside class="side" id="side" aria-label="Продукты и инвентарь"></aside>
+  <section class="canvas" id="canvas" aria-label="Дерево рецепта">
+    <div class="world" id="world"></div>
+    <div class="zoom" aria-label="Масштаб">
+      <button data-act="zoomout" aria-label="Мельче">−</button>
+      <button data-act="fit" id="zoomlabel" title="Вписать в окно">100%</button>
+      <button data-act="zoomin" aria-label="Крупнее">+</button>
+    </div>
+  </section>
+  <aside class="insp" id="insp" aria-label="Свойства"></aside>
+</main>
+
+<div class="pop" id="pop" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<input type="file" id="file" accept=".json,application/json" hidden>
+<script type="module" src="editor.js"></script>
+</body>
+</html>
