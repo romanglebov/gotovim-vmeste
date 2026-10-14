@@ -64,8 +64,14 @@ body.empty .side,body.empty .insp,body.empty .zoom{display:none}
 .ec{font-size:12px;color:var(--muted)}
 
 /* the canvas */
-.canvas{position:relative;overflow:auto;background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:22px 22px}
-.world{position:relative}
+.canvas{position:relative;overflow:hidden;touch-action:none;user-select:none;background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:22px 22px}
+.world{position:absolute;left:0;top:0;transform-origin:0 0}
+body.empty .canvas{overflow:auto;touch-action:auto}
+body.empty .world{position:relative}
+body.panready .canvas,body.panready .canvas *{cursor:grab !important}
+body.panning,body.panning *{cursor:grabbing !important}
+body.moving,body.moving *{cursor:grabbing !important}
+.marquee{position:absolute;z-index:5;pointer-events:none;border:1.5px solid var(--sel);background:rgba(255,210,0,.14);border-radius:3px}
 .wires{position:absolute;left:0;top:0;overflow:visible}
 .wire{fill:none;stroke:var(--wire);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .wire.ing{stroke:var(--wire-soft);stroke-width:2}
@@ -77,7 +83,7 @@ body.empty .side,body.empty .insp,body.empty .zoom{display:none}
 .hit{fill:none;stroke:transparent;stroke-width:16;pointer-events:stroke;cursor:pointer}
 .hit:hover + .wire,.hit:hover{stroke:rgba(201,143,0,.25)}
 
-.node{position:absolute;background:var(--paper);border-radius:14px;box-shadow:0 1px 0 rgba(29,27,22,.08),0 0 0 1px var(--line);cursor:pointer;user-select:none;transition:box-shadow .15s}
+.node{position:absolute;background:var(--paper);border-radius:14px;box-shadow:0 1px 0 rgba(29,27,22,.08),0 0 0 1px var(--line);cursor:grab;user-select:none;transition:box-shadow .15s}
 .node:hover{box-shadow:0 0 0 1.5px var(--ink)}
 .node.sel{box-shadow:0 0 0 3px var(--ink)}
 .node.drop{box-shadow:0 0 0 3px var(--sel),0 6px 18px rgba(201,143,0,.35)}
@@ -106,10 +112,10 @@ body.dragging,body.dragging *{cursor:crosshair !important}
 .ghost{position:fixed;z-index:20;pointer-events:none;background:var(--paper);border:1.5px solid var(--ink);border-radius:10px;padding:5px 9px;font-size:13px;box-shadow:0 6px 16px rgba(0,0,0,.15)}
 body.filedrop .canvas{outline:4px dashed var(--ink);outline-offset:-12px}
 
-.zoom{position:fixed;right:calc(330px + 16px);bottom:16px;display:flex;background:var(--paper);border-radius:12px;box-shadow:0 0 0 1px var(--line),0 4px 12px rgba(0,0,0,.08);z-index:3}
+.zoom{position:absolute;right:16px;bottom:16px;display:flex;background:var(--paper);border-radius:12px;box-shadow:0 0 0 1px var(--line),0 4px 12px rgba(0,0,0,.08);z-index:3}
 .zoom button{border:0;background:none;padding:7px 11px;min-width:38px;font-weight:500}
 .zoom button:hover{background:var(--canvas)}
-.guess{position:sticky;top:12px;left:12px;z-index:4;margin:12px;max-width:560px;background:var(--note);color:var(--note-ink);border-radius:12px;padding:10px 12px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.guess{position:absolute;top:12px;left:12px;z-index:4;margin-right:12px;max-width:560px;background:var(--note);color:var(--note-ink);border-radius:12px;padding:10px 12px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
 .guess button{margin-left:6px;border:1.5px solid currentColor;background:none;border-radius:8px;padding:2px 8px}
 
 /* welcome */
@@ -155,7 +161,7 @@ body.filedrop .canvas{outline:4px dashed var(--ink);outline-offset:-12px}
 .issues button{border:0;background:none;padding:0;text-align:left;text-decoration:underline;text-underline-offset:3px;color:inherit}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:40;max-width:min(560px,calc(100vw - 32px));background:var(--ink);color:#fff;border-radius:12px;padding:10px 14px;font-size:13.5px;box-shadow:0 10px 28px rgba(0,0,0,.25)}
 
-@media (max-width:1100px){.work{grid-template-columns:220px minmax(0,1fr) 290px}.zoom{right:calc(290px + 16px)}}
+@media (max-width:1100px){.work{grid-template-columns:220px minmax(0,1fr) 290px}}
 @media (max-width:820px){
   body{overflow:auto;height:auto}
   .top{height:auto;flex-wrap:wrap;padding:10px 12px;gap:8px}
@@ -164,7 +170,6 @@ body.filedrop .canvas{outline:4px dashed var(--ink);outline-offset:-12px}
   .doc{order:3;flex-basis:100%}
   .work{display:flex;flex-direction:column}
   .canvas{height:62vh;flex:none}
-  .zoom{right:16px}
   .side,.insp{border:0;border-top:1px solid var(--line)}
   .insp{order:2} .side{order:3}
 }

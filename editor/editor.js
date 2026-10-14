@@ -31,7 +31,9 @@ let sel = { kind: 'recipe' }; // what the panel on the right shows: recipe | ste
 let selEdge = null;           // the selected link, e.g. 'dep:peel_garlic>mince_garlic'
 let guessed = false;          // product links were guessed from the text of an older file
 let hist = [], fut = [], typing = null;
-let zoom = 1, L = null;       // current zoom and layout
+let cam = { x: 0, y: 0, k: 1 }; // the camera over the canvas: shift in pixels and zoom
+let L = null;                 // current layout
+let picked = new Set();       // tiles picked with a frame or Shift+click; they move together
 
 /* ---------------- names and ids ---------------- */
 
@@ -103,7 +105,20 @@ function cleanStep(s) {
   if (!o.late) delete o.late;
   return o;
 }
-const fileText = () => JSON.stringify({ ...R, steps: ordered(R.steps).map(cleanStep) }, null, 2) + '\n';
+// Where tiles were moved by hand is kept in the file under "editor"; the phones ignore it.
+const positions = () => ((R.editor = R.editor || {}).positions = R.editor.positions || {});
+function fileText() {
+  const out = { ...R, steps: ordered(R.steps).map(cleanStep) };
+  if (R.editor) {
+    const keys = new Set(layout().nodes.map(n => n.key));
+    const { positions: pos = {}, ...rest } = R.editor;
+    const kept = Object.fromEntries(Object.entries(pos).filter(([k]) => keys.has(k)));
+    if (Object.keys(kept).length) out.editor = { ...rest, positions: kept };
+    else if (Object.keys(rest).length) out.editor = rest;
+    else delete out.editor;
+  }
+  return JSON.stringify(out, null, 2) + '\n';
+}
 
 /* ---------------- opening ---------------- */
 
@@ -139,8 +154,8 @@ function load(obj) {
   const r = normalize(obj);
   guessed = r.ingredients.length > 0 && !obj.steps.some(s => s.ingredients.length);
   if (guessed) guessLinks(r);
-  R = r; hist = []; fut = []; sel = { kind: 'recipe' }; selEdge = null; typing = null;
-  saved(); render(); fit();
+  R = r; hist = []; fut = []; sel = { kind: 'recipe' }; selEdge = null; typing = null; picked = new Set();
+  saved(); render(); firstView();
 }
 
 let book = null;
@@ -224,14 +239,19 @@ function layout() {
   }
   const top = Math.min(...nodes.map(n => n.y)), shift = top < PAD ? PAD - top : 0;
   nodes.forEach(n => { n.y += shift; n.cy += shift; });
-  const W = Math.max(...nodes.map(n => n.x + n.w)) + PAD, H = Math.max(...nodes.map(n => n.y + n.h)) + PAD;
-  return { nodes, edges, byKey, W, H };
+  const pos = (R.editor && R.editor.positions) || {};
+  for (const n of nodes) { const p = pos[n.key]; if (p) { n.x = p[0]; n.y = p[1]; n.cy = n.y + n.h / 2; } }
+  const x1 = Math.min(...nodes.map(n => n.x)), y1 = Math.min(...nodes.map(n => n.y));
+  const x2 = Math.max(...nodes.map(n => n.x + n.w)), y2 = Math.max(...nodes.map(n => n.y + n.h));
+  return { nodes, edges, byKey, box: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 } };
 }
 
-/** A link drawn like a tram line: straight, then one rounded bend in the gap just before the step it feeds. */
+/** A link drawn like a tram line: straight, then one rounded bend in the gap just before the step it feeds.
+    If a tile was moved so that the step it feeds is not to its right, the link becomes a soft curve. */
 function wire(x1, y1, x2, y2) {
+  if (x2 - x1 < 24) { const c = Math.max(60, (x1 - x2) / 2); return `M${x1} ${y1}C${x1 + c} ${y1} ${x2 - c} ${y2} ${x2} ${y2}`; }
   if (Math.abs(y1 - y2) < 0.5) return `M${x1} ${y1}H${x2}`;
-  const mx = x2 - GAP / 2, r = Math.min(14, Math.abs(y2 - y1) / 2), s = y2 > y1 ? 1 : -1;
+  const mx = Math.max(x1 + 12, x2 - GAP / 2), r = Math.min(14, Math.abs(y2 - y1) / 2, mx - x1, x2 - mx), s = y2 > y1 ? 1 : -1;
   return `M${x1} ${y1}H${mx - r}Q${mx} ${y1} ${mx} ${y1 + s * r}V${y2 - s * r}Q${mx} ${y2} ${mx + r} ${y2}H${x2}`;
 }
 
@@ -287,8 +307,7 @@ function renderSide() {
 function renderCanvas() {
   L = layout();
   const world = $('#world');
-  world.style.width = L.W + 'px'; world.style.height = L.H + 'px'; world.style.zoom = zoom;
-  $('#zoomlabel').textContent = Math.round(zoom * 100) + '%';
+  const on1 = n => picked.has(n.key) || (!picked.size && ((n.kind === 'dish' && sel.kind === 'recipe') || (n.kind === sel.kind && n.id === sel.id)));
   const edgeSvg = L.edges.map(e => {
     const d = wire(e.from.x + e.from.w, e.from.cy, e.to.x, e.to.cy);
     const on = selEdge === e.key || (sel.kind === 'step' && (e.from.id === sel.id || e.to.id === sel.id) && e.kind !== 'ing') || (sel.kind === 'ing' && e.kind === 'ing' && e.from.id === sel.id);
@@ -297,19 +316,19 @@ function renderCanvas() {
   const tiles = L.nodes.map(n => {
     const pos = `left:${n.x}px;top:${n.y}px;width:${n.w}px;height:${n.h}px`;
     if (n.kind === 'dish') {
-      return `<div class="node dish ${sel.kind === 'recipe' ? 'sel' : ''}" data-node="dish" data-key="dish" style="${pos}">
+      return `<div class="node dish ${on1(n) ? 'sel' : ''}" data-node="dish" data-key="dish" style="${pos}">
         <span class="dp">${dishPic(R)}</span><b>${esc(R.title || 'Без названия')}</b>
         <small>${R.steps.length} ${plural(R.steps.length, 'шаг', 'шага', 'шагов')}, ${R.ingredients.length} ${plural(R.ingredients.length, 'продукт', 'продукта', 'продуктов')}</small></div>`;
     }
     if (n.kind === 'ing') {
       const i = I(n.id);
-      return `<div class="node ing ${sel.kind === 'ing' && sel.id === n.id ? 'sel' : ''}" data-node="ing:${esc(n.id)}" data-key="${esc(n.key)}" style="${pos}" title="${esc(i.name)}">
+      return `<div class="node ing ${on1(n) ? 'sel' : ''}" data-node="ing:${esc(n.id)}" data-key="${esc(n.key)}" style="${pos}" title="${esc(i.name)}">
         <span class="pi">${esc(i.icon || '🥕')}</span><span class="pn">${esc(i.name)}</span><span class="pa">${esc(amountText(i))}</span>
         <span class="port" data-port="ing:${esc(n.id)}" title="Потяните к шагу, где этот продукт тоже нужен"></span></div>`;
     }
     const s = S(n.id), post = POSTS[s.station] || POSTS.counter;
     const eq = s.resources.map(r => E(r)).filter(Boolean).map(e => esc(e.icon || '🍴')).join('');
-    return `<div class="node step ${sel.kind === 'step' && sel.id === n.id ? 'sel' : ''}" data-node="step:${esc(n.id)}" data-key="${esc(n.key)}" style="${pos};--post:${post.color}">
+    return `<div class="node step ${on1(n) ? 'sel' : ''}" data-node="step:${esc(n.id)}" data-key="${esc(n.key)}" style="${pos};--post:${post.color}">
       <button class="plus" data-act="addbefore" data-id="${esc(n.id)}" title="Добавить шаг, без которого этот не начнётся" aria-label="Добавить шаг перед «${esc(s.title)}»">+</button>
       <b class="st">${esc(s.title || 'Без названия')}</b>
       <span class="sm"><span>${post.icon} ${esc(STATIONS[s.station] || 'Стол')}${s.late ? ' · в конце' : ''}</span><span class="se">${eq}</span></span>
@@ -317,16 +336,17 @@ function renderCanvas() {
   }).join('');
   let cut = '';
   const se = selEdge && L.edges.find(e => e.key === selEdge);
-  if (se) cut = `<button class="cut" data-act="cut" style="left:${se.to.x - GAP / 2}px;top:${(se.from.cy + se.to.cy) / 2}px">Убрать связь</button>`;
+  if (se) cut = `<button class="cut" data-act="cut" style="left:${Math.max(se.from.x + se.from.w + 12, se.to.x - GAP / 2)}px;top:${(se.from.cy + se.to.cy) / 2}px">Убрать связь</button>`;
   const banner = guessed ? `<div class="guess">Этот файл не говорит, какие продукты в каком шаге. Связи угаданы по тексту инструкций — проверьте их. <button data-act="okguess">Понятно</button></div>` : '';
-  world.innerHTML = `<svg class="wires" width="${L.W}" height="${L.H}" aria-hidden="true">${edgeSvg}<path class="wire temp" id="temp" d=""/></svg>${tiles}${cut}`;
+  world.innerHTML = `<svg class="wires" width="1" height="1" aria-hidden="true">${edgeSvg}<path class="wire temp" id="temp" d=""/></svg>${tiles}${cut}`;
   $('#canvas').querySelector('.guess')?.remove();
-  if (banner) $('#canvas').insertAdjacentHTML('afterbegin', banner);
+  if (banner) $('#canvas').insertAdjacentHTML('beforeend', banner);
+  applyCam();
 }
 
 function welcome() {
   const w = $('#world');
-  w.style.zoom = 1; w.style.width = ''; w.style.height = '';
+  w.style.transform = ''; $('#canvas').style.backgroundSize = ''; $('#canvas').style.backgroundPosition = '';
   w.innerHTML = `<div class="hello"><h1>Соберите рецепт из плиток</h1>
     <p>Продукты слева, готовое блюдо справа. Каждая ветка — то, без чего следующий шаг не начнётся.</p>
     <div class="btiles">${book ? bookTiles() : '<span class="muted">Загружаем книгу рецептов…</span>'}</div>
@@ -344,7 +364,14 @@ function renderInsp() {
   if (sel.kind === 'step') return (p.innerHTML = inspStep(S(sel.id)));
   if (sel.kind === 'ing') return (p.innerHTML = inspIng(I(sel.id)));
   if (sel.kind === 'eq') return (p.innerHTML = inspEq(E(sel.id)));
+  if (sel.kind === 'multi') return (p.innerHTML = inspMulti());
   p.innerHTML = inspRecipe();
+}
+
+function inspMulti() {
+  return `<h2 class="ph">Выбрано плиток: ${picked.size}</h2>
+    <p class="fh">Перетащите любую из них — сдвинутся все вместе. Shift+щелчок добавляет плитку к выбору или убирает её.</p>
+    <div class="row"><button class="tb" data-act="unplace">Вернуть на свои места</button></div>`;
 }
 
 function inspRecipe() {
@@ -356,7 +383,7 @@ function inspRecipe() {
       ${field('Поваров', `<span class="range">${input('players.min', R.players?.min ?? 1, 'type="number" min="1" max="4" data-t="num"')}–${input('players.max', R.players?.max ?? 3, 'type="number" min="1" max="4" data-t="num"')}</span>`)}</div>
     <div class="two">${field('Имя файла', input('id', R.id, 'data-t="id"'), 'Латиницей. Так файл и назовётся.')}
       ${field('Версия', input('version', R.version, 'type="number" min="1" data-t="num"'), 'Увеличьте, если меняли шаги.')}</div>
-    <div class="row"><button class="tb" data-act="addstep">Добавить шаг</button></div>`;
+    <div class="row"><button class="tb" data-act="addstep">Добавить шаг</button>${R.editor && R.editor.positions && Object.keys(R.editor.positions).length ? '<button class="tb" data-act="unplaceall">Разложить плитки заново</button>' : ''}</div>`;
 }
 
 function chips(all, on, act, label) {
@@ -444,7 +471,16 @@ function renameId(t, el) {
 
 /* ---------------- editing ---------------- */
 
-function select(s) { sel = s; selEdge = null; typing = null; render(); }
+function select(s) { sel = s; selEdge = null; typing = null; picked = new Set(); render(); }
+
+/** The panel on the right follows the picked tiles: one tile shows itself, several show what can be done with them. */
+function pickedToSel() {
+  selEdge = null; typing = null;
+  if (picked.size > 1) { sel = { kind: 'multi' }; return; }
+  if (!picked.size) { sel = { kind: 'recipe' }; return; }
+  const k = [...picked][0];
+  sel = k === 'dish' ? { kind: 'recipe' } : k.startsWith('step:') ? { kind: 'step', id: k.slice(5) } : { kind: 'ing', id: k.slice(4, k.indexOf('@')) };
+}
 
 function connect(src, dst) {
   if (!dst || !dst.startsWith('step:')) return toast('Отпустите на шаге, который без этого не начнётся.');
@@ -504,14 +540,14 @@ document.addEventListener('click', e => {
     if (!e.target.closest('#pop') && !e.target.closest('[data-act="open"],[data-act="issues"]')) closePop();
     const hit = e.target.closest('[data-edge]');
     if (hit) { selEdge = hit.dataset.edge; renderCanvas(); return; }
-    const n = e.target.closest('[data-node]');
-    if (n && !dragged) {
-      const k = n.dataset.node;
-      if (k === 'dish') return select({ kind: 'recipe' });
-      if (k.startsWith('step:')) return select({ kind: 'step', id: k.slice(5) });
-      if (k.startsWith('ing:')) return select({ kind: 'ing', id: k.slice(4) });
+    const n = e.target.closest('[data-key]');
+    if (dragged) return;
+    if (n) {
+      const key = n.dataset.key;
+      if (e.shiftKey) { if (picked.has(key)) picked.delete(key); else picked.add(key); } else picked = new Set([key]);
+      pickedToSel(); return render();
     }
-    if (e.target.closest('#world') && !n && selEdge) { selEdge = null; renderCanvas(); }
+    if (R && e.target.closest('#canvas') && !e.target.closest('.zoom, .guess')) { picked = new Set(); pickedToSel(); render(); }
     return;
   }
   const a = b.dataset.act, id = b.dataset.id;
@@ -526,8 +562,10 @@ document.addEventListener('click', e => {
     case 'issues': return issuesPop(b);
     case 'gotoissue': { closePop(); const it = issues()[+b.dataset.i]; if (it && it.sel) select(it.sel); return; }
     case 'okguess': guessed = false; saved(); return renderCanvas();
-    case 'zoomin': return setZoom(zoom * 1.2);
-    case 'zoomout': return setZoom(zoom / 1.2);
+    case 'zoomin': return zoomBy(1.25);
+    case 'zoomout': return zoomBy(1 / 1.25);
+    case 'unplace': return commit(() => { const pos = positions(); picked.forEach(k => delete pos[k]); });
+    case 'unplaceall': return commit(() => { delete R.editor.positions; if (!Object.keys(R.editor).length) delete R.editor; });
     case 'fit': return fit();
     case 'cut': return cutEdge(selEdge);
     case 'addbefore': return addStep(id);
@@ -568,67 +606,170 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !inField) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !inField) { e.preventDefault(); redo(); }
   if ((e.key === 'Delete' || e.key === 'Backspace') && selEdge && !inField) { e.preventDefault(); cutEdge(selEdge); }
-  if (e.key === 'Escape') { closePop(); if (selEdge) { selEdge = null; renderCanvas(); } }
+  if (e.key === 'Escape') { closePop(); if (selEdge || picked.size) { selEdge = null; picked = new Set(); pickedToSel(); render(); } }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !inField && R) { e.preventDefault(); picked = new Set(L.nodes.map(n => n.key)); pickedToSel(); render(); }
+  if (e.code === 'Space' && !inField && R) { e.preventDefault(); space = true; document.body.classList.add('panready'); }
+});
+document.addEventListener('keyup', e => { if (e.code === 'Space') { space = false; document.body.classList.remove('panready'); } });
+
+/* ---------------- pointer: pan, move tiles, pick with a frame, link ---------------- */
+// Like Miro: the middle button (or Space with the left button) pans, the wheel zooms to the pointer,
+// a tile is dragged with the left button, and the left button on empty canvas draws a frame that picks tiles.
+// Dragging from a tile's port to a step links them; a product from the list on the left can be dropped on a step.
+let drag = null, dragged = false, space = false, raf = 0;
+const canvasEl = $('#canvas');
+const keyOf = el => el && el.closest('[data-key]') && el.closest('[data-key]').dataset.key;
+const later = fn => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; fn(); }); };
+
+document.addEventListener('pointerdown', e => {
+  if (!R) return;
+  const inCanvas = e.target.closest('#canvas'), port = e.target.closest('[data-port]'), side = e.target.closest('[data-drag]');
+  dragged = false;
+  if (inCanvas && (e.button === 1 || (e.button === 0 && space) || (e.pointerType === 'touch' && !e.target.closest('.node, button')))) {
+    e.preventDefault();
+    drag = { mode: 'pan', x0: e.clientX, y0: e.clientY, cx: cam.x, cy: cam.y, moved: false };
+    document.body.classList.add('panning');
+    return;
+  }
+  if (e.button !== 0) return;
+  if (port || side) {
+    drag = { mode: port ? 'port' : 'side', src: port ? port.dataset.port : side.dataset.drag, x0: e.clientX, y0: e.clientY, moved: false };
+    if (port) { e.preventDefault(); drag.from = L.byKey[keyOf(port)]; }
+    return;
+  }
+  if (!inCanvas || e.target.closest('button, .zoom, .guess, [data-edge]')) return;
+  const key = keyOf(e.target);
+  if (key) {
+    e.preventDefault();
+    if (e.shiftKey) return; // Shift+click adds or removes the tile; that happens on click
+    if (!picked.has(key)) picked = new Set([key]);
+    drag = { mode: 'move', x0: e.clientX, y0: e.clientY, moved: false, snap: JSON.stringify(R),
+      start: Object.fromEntries([...picked].filter(k => L.byKey[k]).map(k => [k, [L.byKey[k].x, L.byKey[k].y]])) };
+    return;
+  }
+  drag = { mode: 'box', x0: e.clientX, y0: e.clientY, moved: false, add: e.shiftKey };
 });
 
-/* Dragging: from a tile's port to a step links them; a product from the list can be dropped on a step. */
-let drag = null, dragged = false;
-document.addEventListener('pointerdown', e => {
-  const port = e.target.closest('[data-port]'), side = e.target.closest('[data-drag]');
-  if (!port && !side) return;
-  drag = { src: (port || side).dataset.port || side.dataset.drag, port: !!port, x0: e.clientX, y0: e.clientY, moved: false };
-  dragged = false;
-  if (port) { e.preventDefault(); drag.from = L.byKey[port.closest('[data-key]').dataset.key]; }
-});
 document.addEventListener('pointermove', e => {
   if (!drag) return;
-  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+  const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+  if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+  if (!drag.moved && drag.mode === 'move') { pickedToSel(); renderInsp(); }
   drag.moved = true; dragged = true;
+  if (drag.mode === 'pan') { cam.x = drag.cx + dx; cam.y = drag.cy + dy; applyCam(); return; }
+  if (drag.mode === 'move') {
+    document.body.classList.add('moving');
+    const pos = positions();
+    for (const [k, [x, y]] of Object.entries(drag.start)) pos[k] = [Math.round(x + dx / cam.k), Math.round(y + dy / cam.k)];
+    later(renderCanvas);
+    return;
+  }
+  if (drag.mode === 'box') {
+    const r = canvasEl.getBoundingClientRect();
+    let m = $('#marquee');
+    if (!m) { m = document.createElement('div'); m.id = 'marquee'; m.className = 'marquee'; canvasEl.append(m); }
+    Object.assign(m.style, { left: Math.min(e.clientX, drag.x0) - r.left + 'px', top: Math.min(e.clientY, drag.y0) - r.top + 'px', width: Math.abs(dx) + 'px', height: Math.abs(dy) + 'px' });
+    return;
+  }
   document.body.classList.add('dragging');
   const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-node^="step:"]');
   document.querySelectorAll('.node.drop').forEach(n => n !== over && n.classList.remove('drop'));
   if (over) over.classList.add('drop');
-  const w = $('#world').getBoundingClientRect();
-  const x = (e.clientX - w.left) / zoom, y = (e.clientY - w.top) / zoom;
-  if (drag.port && drag.from) $('#temp').setAttribute('d', `M${drag.from.x + drag.from.w} ${drag.from.cy}C${drag.from.x + drag.from.w + 60} ${drag.from.cy} ${x - 60} ${y} ${x} ${y}`);
-  if (!drag.port) {
+  const p = toWorld(e.clientX, e.clientY);
+  if (drag.mode === 'port' && drag.from) $('#temp').setAttribute('d', `M${drag.from.x + drag.from.w} ${drag.from.cy}C${drag.from.x + drag.from.w + 60} ${drag.from.cy} ${p.x - 60} ${p.y} ${p.x} ${p.y}`);
+  if (drag.mode === 'side') {
     let g = $('#ghost');
     if (!g) { g = document.createElement('div'); g.id = 'ghost'; g.className = 'ghost'; const i = I(drag.src.slice(4)); g.textContent = `${i.icon || '🥕'} ${i.name}`; document.body.append(g); }
     g.style.left = e.clientX + 12 + 'px'; g.style.top = e.clientY + 12 + 'px';
   }
 });
-document.addEventListener('pointerup', e => {
+
+function endDrag(e, cancelled) {
   if (!drag) return;
   const d = drag; drag = null;
-  document.body.classList.remove('dragging');
-  $('#ghost')?.remove();
+  document.body.classList.remove('dragging', 'panning', 'moving');
+  $('#ghost')?.remove(); $('#marquee')?.remove();
   document.querySelectorAll('.node.drop').forEach(n => n.classList.remove('drop'));
   const t = $('#temp'); if (t) t.setAttribute('d', '');
   if (!d.moved) return;
-  const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-node]');
-  connect(d.src, over ? over.dataset.node : null);
   setTimeout(() => (dragged = false), 0);
-});
-
-/* ---------------- zoom ---------------- */
-
-function setZoom(z) {
-  const c = $('#canvas'), old = zoom;
-  zoom = Math.min(1.6, Math.max(0.3, z));
-  const cx = c.scrollLeft + c.clientWidth / 2, cy = c.scrollTop + c.clientHeight / 2;
-  $('#world').style.zoom = zoom; $('#zoomlabel').textContent = Math.round(zoom * 100) + '%';
-  c.scrollLeft = cx * zoom / old - c.clientWidth / 2; c.scrollTop = cy * zoom / old - c.clientHeight / 2;
+  if (d.mode === 'move') {
+    hist.push(d.snap); if (hist.length > 200) hist.shift();
+    fut = []; typing = null; saved(); renderTop(); renderCanvas(); renderInsp();
+    return;
+  }
+  if (cancelled) return;
+  if (d.mode === 'box') {
+    const a = toWorld(d.x0, d.y0), b = toWorld(e.clientX, e.clientY);
+    const x1 = Math.min(a.x, b.x), x2 = Math.max(a.x, b.x), y1 = Math.min(a.y, b.y), y2 = Math.max(a.y, b.y);
+    const hit = L.nodes.filter(n => n.x < x2 && n.x + n.w > x1 && n.y < y2 && n.y + n.h > y1).map(n => n.key);
+    picked = new Set(d.add ? [...picked, ...hit] : hit);
+    pickedToSel(); render();
+    return;
+  }
+  if (d.mode === 'port' || d.mode === 'side') {
+    const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-node]');
+    connect(d.src, over ? over.dataset.node : null);
+  }
 }
+document.addEventListener('pointerup', e => endDrag(e, false));
+document.addEventListener('pointercancel', e => endDrag(e, true));
+canvasEl.addEventListener('auxclick', e => e.preventDefault());
+
+/* ---------------- camera ---------------- */
+
+function applyCam() {
+  $('#world').style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.k})`;
+  // The dotted paper moves and scales with the tiles.
+  const g = 22 * cam.k;
+  canvasEl.style.backgroundSize = `${g}px ${g}px`;
+  canvasEl.style.backgroundPosition = `${cam.x}px ${cam.y}px`;
+  $('#zoomlabel').textContent = Math.round(cam.k * 100) + '%';
+}
+function toWorld(cx, cy) {
+  const r = canvasEl.getBoundingClientRect();
+  return { x: (cx - r.left - cam.x) / cam.k, y: (cy - r.top - cam.y) / cam.k };
+}
+/** Zoom keeping the point under (cx, cy) in place. */
+function zoomAt(k, cx, cy) {
+  const r = canvasEl.getBoundingClientRect(), px = cx - r.left, py = cy - r.top;
+  k = Math.min(2, Math.max(0.2, k));
+  cam.x = px - (px - cam.x) * k / cam.k; cam.y = py - (py - cam.y) * k / cam.k; cam.k = k;
+  applyCam();
+}
+function zoomBy(f) { const r = canvasEl.getBoundingClientRect(); zoomAt(cam.k * f, r.left + r.width / 2, r.top + r.height / 2); }
+/** Show the whole recipe. */
 function fit() {
   if (!L) return;
-  const c = $('#canvas');
-  // Fit the whole tree if it stays readable; otherwise keep the tiles legible and show the dish end.
-  zoom = Math.min(1, Math.max(0.7, Math.min((c.clientWidth - 24) / L.W, (c.clientHeight - 24) / L.H)));
-  $('#world').style.zoom = zoom; $('#zoomlabel').textContent = Math.round(zoom * 100) + '%';
-  const dish = L.byKey.dish;
-  c.scrollLeft = c.scrollWidth; c.scrollTop = Math.max(0, dish.cy * zoom - c.clientHeight / 2);
+  const c = canvasEl, b = L.box;
+  cam.k = Math.min(1, Math.max(0.2, Math.min((c.clientWidth - 80) / b.w, (c.clientHeight - 80) / b.h)));
+  cam.x = (c.clientWidth - b.w * cam.k) / 2 - b.x * cam.k;
+  cam.y = (c.clientHeight - b.h * cam.k) / 2 - b.y * cam.k;
+  applyCam();
 }
-$('#canvas').addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
+/** On opening: the whole recipe if it stays readable, otherwise readable tiles with the dish in view. */
+function firstView() {
+  if (!L) return;
+  const c = canvasEl, b = L.box;
+  if (Math.min((c.clientWidth - 80) / b.w, (c.clientHeight - 80) / b.h) >= 0.7) return fit();
+  const d = L.byKey.dish;
+  cam.k = 0.7;
+  cam.x = c.clientWidth - 48 - (d.x + d.w) * cam.k;
+  cam.y = c.clientHeight / 2 - d.cy * cam.k;
+  applyCam();
+}
+function centerOn(key) {
+  const n = L.byKey[key]; if (!n) return;
+  cam.x = canvasEl.clientWidth / 2 - (n.x + n.w / 2) * cam.k;
+  cam.y = canvasEl.clientHeight / 2 - n.cy * cam.k;
+  applyCam();
+}
+canvasEl.addEventListener('wheel', e => {
+  if (!R) return;
+  e.preventDefault();
+  const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+  zoomAt(cam.k * Math.exp(-d * 0.0015), e.clientX, e.clientY);
+}, { passive: false });
 
 /* ---------------- popups, files, messages ---------------- */
 
@@ -694,8 +835,8 @@ if (draft && draft.R) {
   try { R = normalize(draft.R); guessed = !!draft.guessed; } catch (e) { R = null; }
 }
 render();
-if (R) requestAnimationFrame(fit);
+if (R) requestAnimationFrame(firstView);
 loadBook().catch(() => {});
 
 // For tests and the console: the exact file "Скачать файл" would save.
-window.receptor = { fileText: () => (R ? fileText() : null), load: o => load(o), get recipe() { return R; } };
+window.receptor = { fileText: () => (R ? fileText() : null), load: o => load(o), center: centerOn, get recipe() { return R; }, get cam() { return { ...cam }; } };
