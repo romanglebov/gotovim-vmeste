@@ -15,7 +15,7 @@ export function validate(r) {
   if (r.format_version > SUPPORTED_FORMAT) throw `рецепт сделан для более новой версии приложения (формат ${r.format_version}).`;
   for (const k of ['id', 'title', 'equipment', 'ingredients', 'steps']) if (!(k in r)) throw `нет поля «${k}».`;
   if (!Array.isArray(r.steps) || !r.steps.length) throw 'в рецепте нет шагов.';
-  const ids = new Set(), eq = new Set(r.equipment.map(e => e.id));
+  const ids = new Set(), eq = new Set(r.equipment.map(e => e.id)), ing = new Set(r.ingredients.map(i => i.id));
   for (const s of r.steps) {
     if (!s.id || !s.title) throw 'у каждого шага должны быть id и title.';
     if (ids.has(s.id)) throw `шаг «${s.id}» встречается дважды.`;
@@ -25,6 +25,7 @@ export function validate(r) {
     s.depends_on = s.depends_on || []; s.resources = s.resources || [];
     for (const d of s.depends_on) if (!ids.has(d)) throw `шаг «${s.id}» зависит от несуществующего шага «${d}».`;
     for (const x of s.resources) if (!eq.has(x)) throw `шаг «${s.id}» использует «${x}», которого нет в инвентаре.`;
+    for (const x of s.ingredients || []) if (!ing.has(x)) throw `шаг «${s.id}» берёт продукт «${x}», которого нет в списке продуктов.`;
     if (s.station && !STATIONS[s.station]) throw `у шага «${s.id}» неизвестный пост «${s.station}». Посты: ${Object.keys(STATIONS).join(', ')}.`;
     s.station = s.station || 'counter';
   }
