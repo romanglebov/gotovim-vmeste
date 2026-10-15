@@ -188,3 +188,37 @@ test('накрыть на стол предлагается последним',
   const list = options(st, ctx, 0).steps;
   assert.equal(list.at(-1).id, 'set_table');
 });
+
+test('повар выходит посреди готовки: его шаг достаётся другим, остальные доготавливают', () => {
+  const R = JSON.parse(JSON.stringify(recipes.find(r => r.id === 'mushroom_cream_soup'))); const ctx = prepare(R);
+  const st = createState({ code: 'X', recipe: R, hostPid: 'h', hostName: 'Рома', now: 0 });
+  apply(st, ctx, { pid: 'g', type: 'join', name: 'Алёна' }, 0);
+  apply(st, ctx, { pid: 'h', type: 'toEquip' }, 0);
+  apply(st, ctx, { pid: 'h', type: 'go' }, 0);
+  const hers = st.cooks[1].task.id;
+  assert.ok(act(st, ctx, { pid: 'g', type: 'leave' }, 5).ok);
+  assert.equal(st.cooks[1].gone, true);
+  assert.equal(st.cooks[1].task, null);
+  assert.ok(!st.done[hers], 'её шаг не засчитан');
+  let now = 10;
+  for (let guard = 0; st.phase === 'cook' && guard < 500; guard++) {
+    const t = st.cooks[0].task;
+    assert.equal(st.cooks[1].task, null, 'ушедшему ничего не назначается');
+    assert.ok(act(st, ctx, { pid: 'h', type: 'done', id: t.id }, (now += 10)).ok);
+  }
+  assert.equal(st.phase, 'done');
+  assert.ok(R.steps.every(s => st.done[s.id]));
+});
+
+test('ушедший повар может вернуться, ведущий выйти так нельзя', () => {
+  const R = JSON.parse(JSON.stringify(recipes[0])); const ctx = prepare(R);
+  const st = createState({ code: 'X', recipe: R, hostPid: 'h', hostName: 'Рома', now: 0 });
+  apply(st, ctx, { pid: 'g', type: 'join', name: 'Алёна' }, 0);
+  apply(st, ctx, { pid: 'h', type: 'toEquip' }, 0);
+  apply(st, ctx, { pid: 'h', type: 'go' }, 0);
+  assert.equal(apply(st, ctx, { pid: 'h', type: 'leave' }, 1).ok, false);
+  apply(st, ctx, { pid: 'g', type: 'leave' }, 1);
+  assert.ok(apply(st, ctx, { pid: 'g', type: 'join', name: 'Алёна' }, 2).ok);
+  assert.equal(st.cooks[1].gone, undefined);
+  assert.equal(st.cooks[1].task.type, 'step', 'вернувшейся сразу дают шаг');
+});

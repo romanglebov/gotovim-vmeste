@@ -35,8 +35,9 @@ async function newPhone(label) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const text = p => p.locator('#app').innerText();
 
-async function playGame(title, reloadMidway) {
-  const host = await newPhone(`${title}/host`), guest = await newPhone(`${title}/guest`);
+/** Рома creates a game, Алёна joins by the link; both are on the "you will need" screen. */
+async function startGame(title, tag = '') {
+  const host = await newPhone(`${title}${tag}/host`), guest = await newPhone(`${title}${tag}/guest`);
   await host.goto(dev.url);
   await host.click('[data-act="book"]');
   await host.locator('.dish', { hasText: title }).click();
@@ -54,6 +55,11 @@ async function playGame(title, reloadMidway) {
 
   await host.click('[data-act="toEquip"]');
   await guest.locator('text=Вам понадобятся').waitFor({ timeout: 10000 });
+  return { host, guest, code };
+}
+
+async function playGame(title, reloadMidway) {
+  const { host, guest, code } = await startGame(title);
 
   // A tick on one phone shows up on the other.
   await host.locator('.tile').nth(0).click();
@@ -100,13 +106,59 @@ async function playGame(title, reloadMidway) {
   return { title, ok, code, actions, seconds: Math.round((Date.now() - start) / 1000), reloaded };
 }
 
+/** The ✕ during cooking: a question first, then home. A cook who left can come back; the host ends the game for all. */
+async function quitGame(title) {
+  const { host, guest, code } = await startGame(title, ' (выход)');
+  const fail = m => errors.push(`${title} (выход): ${m}`);
+  await host.click('[data-act="go"]');
+  await guest.locator('#deck').waitFor({ timeout: 10000 });
+  const ask = async (p, expectNote) => {
+    await p.click('[data-act="quit"]');
+    const d = p.locator('.dlg');
+    await d.waitFor({ timeout: 5000 });
+    if ((await d.locator('h2').innerText()) !== 'Закончить и выйти на главный экран?') fail('не тот вопрос: ' + await d.locator('h2').innerText());
+    const note = await d.locator('#dlgd').count() ? await d.locator('#dlgd').innerText() : '';
+    if (note !== expectNote) fail(`пояснение «${note}», а ждали «${expectNote}»`);
+  };
+  // «Остаться» and Escape keep the game.
+  await ask(guest, 'Остальные доготовят без вас.');
+  await guest.click('.dlg [data-act="stay"]');
+  if (await guest.locator('.dlg').count() || !(await guest.locator('#deck').count())) fail('«Остаться» не вернуло к готовке');
+  await ask(guest, 'Остальные доготовят без вас.');
+  await guest.keyboard.press('Escape');
+  if (await guest.locator('.dlg').count()) fail('Escape не закрыл вопрос');
+  // Алёна leaves: she is home, Рома keeps cooking and gets her step back into the pool.
+  await ask(guest, 'Остальные доготовят без вас.');
+  await guest.click('.dlg [data-act="quitok"]');
+  await guest.locator('h1.title', { hasText: 'Готовим вместе' }).waitFor({ timeout: 10000 });
+  await sleep(500);
+  if (!(await host.locator('button[data-act="done"]').count())) fail('у ведущего пропал шаг после выхода гостя');
+  // She comes back by the same link.
+  await guest.goto(`${dev.url}#join-${code}-0`);
+  await guest.locator('text=Вы вышли из игры').waitFor({ timeout: 10000 });
+  await guest.click('[data-act="join"]');
+  await guest.locator('button[data-act="done"]').waitFor({ timeout: 10000 });
+  // Рома ends it for everyone; Алёна sees the end screen.
+  await ask(host, 'Готовка закончится у всех.');
+  await host.click('.dlg [data-act="quitok"]');
+  await host.locator('h1.title', { hasText: 'Готовим вместе' }).waitFor({ timeout: 10000 });
+  await guest.locator('text=Готовка остановлена').waitFor({ timeout: 10000 });
+  // On the "you will need" screen the ✕ is there too.
+  const second = await startGame(title, ' (выход до начала)');
+  await second.host.click('[data-act="quit"]');
+  await second.host.click('.dlg [data-act="quitok"]');
+  await second.guest.locator('text=Ведущий закрыл игру').waitFor({ timeout: 10000 });
+  for (const p of [host, guest, second.host, second.guest]) await p.context().close();
+  return { title: title + ': выход из игры', ok: true, code, actions: 0, seconds: 0 };
+}
+
 let results;
 try {
-  results = await Promise.all(titles.map((t, i) => playGame(t, i === 0)));
+  results = await Promise.all([...titles.map((t, i) => playGame(t, i === 0)), quitGame(titles[titles.length - 1]).catch(e => { errors.push('выход: ' + e.message); return { title: 'выход из игры', ok: false }; })]);
 } finally {
   await browser.close();
   await dev.close();
 }
-for (const r of results) console.log(`${r.ok ? 'OK  ' : 'FAIL'} ${r.title}: игра ${r.code}, ${r.actions} нажатий, ${r.seconds} с${r.reloaded ? ', с перезагрузкой обоих телефонов' : ''}`);
+for (const r of results) console.log(r.actions ? `${r.ok ? 'OK  ' : 'FAIL'} ${r.title}: игра ${r.code}, ${r.actions} нажатий, ${r.seconds} с${r.reloaded ? ', с перезагрузкой обоих телефонов' : ''}` : `${r.ok ? 'OK  ' : 'FAIL'} ${r.title}`);
 if (errors.length) { console.log('Ошибки в консоли:\n' + [...new Set(errors)].slice(0, 20).join('\n')); }
 process.exit(results.every(r => r.ok) && !errors.length ? 0 : 1);
