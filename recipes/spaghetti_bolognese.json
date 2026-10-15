@@ -1,0 +1,222 @@
+{
+  "format_version": 1,
+  "id": "spaghetti_bolognese",
+  "version": 1,
+  "title": "Спагетти болоньезе",
+  "image": "images/spaghetti_bolognese.svg",
+  "icon": "🍝",
+  "base_servings": 4,
+  "players": {
+    "min": 1,
+    "max": 3
+  },
+  "equipment": [
+    {
+      "id": "pot",
+      "name": "Большая кастрюля 4–5 л с крышкой",
+      "count": 1,
+      "icon": "🍲"
+    },
+    {
+      "id": "pan",
+      "name": "Большая сковорода",
+      "count": 1,
+      "icon": "🍳"
+    },
+    {
+      "id": "stove",
+      "name": "Конфорка",
+      "count": 2,
+      "icon": "🔥"
+    },
+    {
+      "id": "scale",
+      "name": "Кухонные весы",
+      "count": 1,
+      "icon": "⚖️"
+    },
+    {
+      "id": "spatula",
+      "name": "Лопатка",
+      "count": 1,
+      "icon": "🥄"
+    },
+    {
+      "id": "colander",
+      "name": "Дуршлаг",
+      "count": 1,
+      "icon": "🥣"
+    },
+    {
+      "id": "mug",
+      "name": "Кружка",
+      "count": 1,
+      "icon": "☕"
+    },
+    {
+      "id": "tongs",
+      "name": "Щипцы или вилка для пасты",
+      "count": 1,
+      "icon": "🍴"
+    }
+  ],
+  "ingredients": [
+    {
+      "id": "spaghetti",
+      "name": "Спагетти",
+      "amount": 400,
+      "unit": "g",
+      "icon": "🍝"
+    },
+    {
+      "id": "sauce",
+      "name": "Соус болоньезе с говядиной, банка",
+      "amount": 420,
+      "unit": "g",
+      "icon": "🫙"
+    },
+    {
+      "id": "salt",
+      "name": "Соль",
+      "amount": 1,
+      "unit": "tbsp",
+      "icon": "🧂"
+    }
+  ],
+  "steps": [
+    {
+      "id": "boil_water",
+      "title": "Вскипятить 4 литра воды",
+      "station": "stove",
+      "item": "вода",
+      "description": "Налейте в большую кастрюлю 4 л воды, накройте крышкой и поставьте на сильный огонь. Вода для пасты закипает долго, поэтому её ставят первой.",
+      "technique": "bring_to_boil",
+      "depends_on": [],
+      "resources": [
+        "pot",
+        "stove"
+      ],
+      "help": null
+    },
+    {
+      "id": "weigh_pasta",
+      "title": "Отвесить спагетти",
+      "station": "counter",
+      "item": "паста",
+      "description": "Поставьте на весы тарелку, обнулите их и отвесьте 400 г спагетти — это примерно 2/5 пачки. Остальное закройте и уберите.",
+      "ingredients": [
+        "spaghetti"
+      ],
+      "technique": "weigh",
+      "depends_on": [],
+      "resources": [
+        "scale"
+      ],
+      "help": null
+    },
+    {
+      "id": "cook_pasta",
+      "title": "Сварить спагетти",
+      "station": "stove",
+      "item": "паста",
+      "description": "Когда вода бурно закипит, посолите её (1 ст. л.), опустите спагетти веером и, как только они размякнут, погрузите целиком и перемешайте, чтобы не слиплись. Варите без крышки при сильном кипении около 7 минут, иногда помешивая. На 6-й минуте попробуйте одну: готовые мягкие, но в середине чуть упругие.",
+      "ingredients": [
+        "salt"
+      ],
+      "technique": "boil_pasta",
+      "depends_on": [
+        "boil_water",
+        "weigh_pasta"
+      ],
+      "resources": [
+        "pot",
+        "stove",
+        "tongs"
+      ],
+      "help": null
+    },
+    {
+      "id": "heat_sauce",
+      "title": "Разогреть соус",
+      "station": "stove",
+      "item": "соус",
+      "description": "Откройте банку и вылейте соус в сковороду. Налейте в банку 3 ст. л. воды, закройте, встряхните и вылейте туда же. Грейте на среднем огне 4–5 минут, помешивая, пока соус не начнёт пузыриться по всей поверхности. Затем убавьте огонь до самого слабого.",
+      "ingredients": [
+        "sauce"
+      ],
+      "technique": "heat_sauce",
+      "depends_on": [
+        "boil_water"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "spatula"
+      ],
+      "help": null
+    },
+    {
+      "id": "drain_pasta",
+      "title": "Слить спагетти",
+      "station": "sink",
+      "item": "паста",
+      "description": "Зачерпните кружку воды от варки и отставьте. Откиньте спагетти на дуршлаг и встряхните. Не промывайте: крахмал на них помогает соусу держаться.",
+      "technique": "drain_colander",
+      "depends_on": [
+        "cook_pasta"
+      ],
+      "resources": [
+        "pot",
+        "colander",
+        "mug"
+      ],
+      "help": null
+    },
+    {
+      "id": "mix",
+      "title": "Соединить с соусом",
+      "station": "stove",
+      "item": "паста",
+      "description": "Переложите спагетти в сковороду с соусом и перемешивайте щипцами на слабом огне 1 минуту, пока соус не обволочёт каждую макаронину. Если соус густой и не расходится, подлейте 2–3 ст. л. воды из кружки.",
+      "technique": "toss_pasta",
+      "depends_on": [
+        "drain_pasta",
+        "heat_sauce"
+      ],
+      "resources": [
+        "pan",
+        "stove",
+        "tongs"
+      ],
+      "help": null
+    },
+    {
+      "id": "set_table",
+      "title": "Накрыть на стол",
+      "station": "counter",
+      "item": "стол",
+      "description": "Поставьте глубокие тарелки и вилки.",
+      "technique": "set_table",
+      "depends_on": [],
+      "resources": [],
+      "late": true,
+      "help": null
+    },
+    {
+      "id": "serve",
+      "title": "Подать",
+      "station": "counter",
+      "item": "паста",
+      "description": "Разложите спагетти по тарелкам щипцами, закручивая каждую порцию гнездом, и полейте соусом, оставшимся в сковороде.",
+      "technique": "plate_pasta",
+      "depends_on": [
+        "mix",
+        "set_table"
+      ],
+      "resources": [
+        "tongs"
+      ],
+      "help": null
+    }
+  ]
+}
