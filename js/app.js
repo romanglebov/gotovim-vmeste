@@ -63,6 +63,7 @@ const seenNotes = new Set();
 let deck = null;          // index of the recipe card being viewed; null = follow my own work
 let deckKey = '';         // what my own work was when the deck was last reset
 let lastTap = 0;          // when this phone was last tapped
+let asking = false;       // the "finish and go home?" question is open
 
 const me = () => (st ? cookIndex(st, PID) : -1);
 
@@ -205,6 +206,30 @@ const who = i => `<span class="who" style="--cc:${ccol(i)}">${esc(st.cooks[i].na
 const names = () => `<div class="names">${st.cooks.map((_, i) => who(i)).join('')}</div>`;
 const hostName = () => { const h = st.cooks.find(c => c.pid === st.host); return h ? h.name : 'ведущий'; };
 const hero = () => (R.image ? `<div class="hero">${dishPic(R)}</div>` : '');
+const quitBtn = `<button class="quit" data-act="quit" aria-label="Закончить и выйти" title="Закончить и выйти">✕</button>`;
+
+/** Asked before leaving a game that is under way. */
+function quitDialog() {
+  const others = st.cooks.filter((c, i) => i !== me() && !c.gone).length;
+  const note = !others ? '' : role === 'host' ? 'Готовка закончится у всех.' : 'Остальные доготовят без вас.';
+  return `<div class="scrim" data-act="stay" aria-hidden="true"></div>
+    <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlgt"${note ? ' aria-describedby="dlgd"' : ''}>
+      <h2 id="dlgt">Закончить и выйти на главный экран?</h2>${note ? `<p class="muted" id="dlgd">${note}</p>` : ''}
+      <div class="dlgb"><button class="big secondary" data-act="stay">Остаться</button><button class="big" data-act="quitok">Выйти</button></div>
+    </div>`;
+}
+function quitGame() {
+  asking = false;
+  if (role === 'host') {
+    if (st.phase === 'cook') send('stop'); // everyone gets the end screen with what was done
+    else { st.phase = 'closed'; st.rev++; publishState(); }
+    return endSession();
+  }
+  send('leave');
+  const until = Date.now() + 3000; // give the message a moment to get out
+  const wait = () => (!isPending() || Date.now() > until ? endSession() : setTimeout(wait, 150));
+  wait();
+}
 
 /** A line about the connection, shown only when something is wrong. */
 function netBar() {
@@ -281,7 +306,7 @@ function tile(k, item, qty) {
 }
 function scrEquip() {
   const amt = i => i.amount == null ? (UNITS[i.unit] || '') : (String(i.amount).replace('.', ',') + ' ' + (UNITS[i.unit] || i.unit || ''));
-  return `<h1>Вам понадобятся</h1>
+  return `<div class="top"><h1>Вам понадобятся</h1>${quitBtn}</div>
     <p class="muted">Отметьте, что уже достали. Отметки видны всем.</p>
     <h3 class="sub">Инвентарь</h3>
     <div class="tiles">${R.equipment.map(e => tile('e:' + e.id, e, (e.count || 1) > 1 ? e.count + ' шт.' : '')).join('')}</div>
@@ -345,7 +370,7 @@ function suggestions(ci) {
 function scrCook() {
   const ci = me();
   const doneN = Object.keys(st.done).length, total = R.steps.length;
-  const head = `<div class="bar" role="progressbar" aria-label="Сделано шагов" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${doneN}"><i style="width:${(doneN / total) * 100}%"></i></div>`;
+  const head = `<div class="top"><div class="bar" role="progressbar" aria-label="Сделано шагов" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${doneN}"><i style="width:${(doneN / total) * 100}%"></i></div>${ci >= 0 ? quitBtn : ''}</div>`;
   if (ci < 0) return head + `<div class="card grow mid"><h2>Игра идёт без этого телефона</h2><p class="muted">Присоединиться можно только до начала готовки.</p></div><button class="big secondary" data-act="leavegame">На главную</button>`;
 
   const t = st.cooks[ci].task;
@@ -412,6 +437,8 @@ function screen() {
   if (!st || (role === 'guest' && !R)) return scrLookup();
   if (st.phase === 'closed') return scrClosed();
   if (st.phase === 'lobby') return scrLobby();
+  if (me() >= 0 && st.cooks[me()].gone && st.phase !== 'done') return `<div class="card grow mid"><h2>Вы вышли из игры</h2><p class="muted">Остальные готовят дальше.</p></div>
+    <div class="stack"><button class="big" data-act="join" ${isPending() ? 'disabled' : ''}>Вернуться в игру</button><button class="linkish" data-act="leavegame">На главную</button></div>`;
   if (me() < 0 && st.phase !== 'done') return `<div class="card grow mid"><h2>Игра уже идёт без вас</h2><p class="muted">Присоединиться можно только до начала готовки.</p></div><button class="big" data-act="leavegame">На главную</button>`;
   if (st.phase === 'equip') return scrEquip();
   if (st.phase === 'cook') return scrCook();
@@ -422,7 +449,11 @@ function render() {
   const f = document.activeElement, fid = f && f.id && f.tagName === 'INPUT' ? f.id : null;
   const sel = fid ? f.selectionStart : null;
   const open = !!document.querySelector('details.more[open]');
-  app.innerHTML = netBar() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '') + screen();
+  if (asking && !(st && (st.phase === 'equip' || st.phase === 'cook') && me() >= 0 && !st.cooks[me()].gone)) asking = false;
+  const wasAsking = !!document.querySelector('.dlg');
+  app.innerHTML = netBar() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '') + screen() + (asking ? quitDialog() : '');
+  document.body.classList.toggle('modal', asking);
+  if (asking && !wasAsking) $('.dlg [data-act="stay"]').focus();
   if (open) { const d = document.querySelector('details.more'); if (d) d.open = true; }
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { el.setSelectionRange(sel, sel); } catch (e) { /* not a text input */ } } }
 }
@@ -437,8 +468,16 @@ app.addEventListener('input', e => {
 app.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'code') $('[data-act="findcode"]').click();
 });
+document.addEventListener('keydown', e => {
+  if (!asking) return;
+  if (e.key === 'Escape') { e.preventDefault(); $('.dlg [data-act="stay"]').click(); }
+  if (e.key === 'Tab') { // keep focus inside the question
+    const b = [...document.querySelectorAll('.dlg button')], i = b.indexOf(document.activeElement);
+    e.preventDefault(); b[(i + (e.shiftKey ? b.length - 1 : 1)) % b.length].focus();
+  }
+});
 app.addEventListener('click', e => {
-  const b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
+  const b = e.target.closest('button[data-act], .scrim'); if (!b || b.disabled) return;
   const a = b.dataset.act;
   lastTap = Date.now();
   switch (a) {
@@ -472,6 +511,9 @@ app.addEventListener('click', e => {
     }
     case 'mine': deck = null; return render();
     case 'copy': return copyStats();
+    case 'quit': asking = true; return render();
+    case 'stay': asking = false; render(); { const q = $('[data-act="quit"]'); if (q) q.focus(); } return;
+    case 'quitok': return quitGame();
   }
 });
 
@@ -530,6 +572,13 @@ async function boot() {
   }
   render();
 }
+// A join link opened in a tab that is already on the home screen.
+window.addEventListener('hashchange', () => {
+  const m = location.hash.match(/^#join-([A-Z]{5})-(\d)$/);
+  if (!m || role) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  joinByCode(m[1], +m[2]);
+});
 function resumeHost(saved) {
   role = 'host'; code = saved.code; brokerIdx = saved.broker || 0;
   try { R = validate(saved.recipe); ctx = prepare(R); st = saved.st; } catch (e) { store.del('gv-session'); role = null; return; }

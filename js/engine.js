@@ -154,11 +154,11 @@ function log(st, e, now) {
 // A free cook gets the best next step at once, so the phone always shows one step and one button.
 // The cook who has just finished goes first: the continuation of their own work stays theirs.
 function schedule(st, ctx, now, first = -1) {
-  st.cooks.forEach(c => { if (!c.task) c.task = { type: 'choose', start: now }; });
+  st.cooks.forEach(c => { if (!c.task && !c.gone) c.task = { type: 'choose', start: now }; });
   const order = st.cooks.map((_, i) => i).sort((a, b) => (b === first) - (a === first));
   for (const i of order) {
     const c = st.cooks[i];
-    if (c.task.type !== 'choose') continue;
+    if (!c.task || c.task.type !== 'choose') continue;
     const s = options(st, ctx, i).steps[0];
     if (!s) continue;
     if (now > c.task.start) log(st, { type: 'wait', id: 'wait', cook: i, start: c.task.start }, now);
@@ -195,15 +195,29 @@ function applyInner(st, ctx, a, now) {
   const isHost = a.pid === st.host;
   switch (a.type) {
     case 'join': {
-      if (ci >= 0) { st.cooks[ci].name = cleanName(a.name, ci); return { ok: true }; }
+      if (ci >= 0) {
+        const c = st.cooks[ci];
+        c.name = cleanName(a.name, ci);
+        if (c.gone) { delete c.gone; if (st.phase === 'cook') schedule(st, ctx, now); } // came back after leaving
+        return { ok: true };
+      }
       if (st.phase !== 'lobby') return { ok: false, err: 'Игра уже началась, присоединиться можно только в лобби.' };
       if (st.cooks.length >= maxCooks(ctx.R)) return { ok: false, err: 'В игре уже максимум поваров для этого рецепта.' };
       st.cooks.push({ pid: a.pid, name: cleanName(a.name, st.cooks.length), task: null, last: null });
       return { ok: true };
     }
     case 'leave': {
-      if (st.phase !== 'lobby' || ci <= 0) return { ok: false, err: 'Сейчас выйти нельзя.' };
-      st.cooks.splice(ci, 1);
+      // Before the start a cook simply drops out. Later they stay in the log but get nothing new;
+      // a step they were on goes back to the others.
+      if (ci <= 0 || st.phase === 'done' || st.phase === 'closed') return { ok: false, err: 'Сейчас выйти нельзя.' };
+      if (st.phase === 'lobby') { st.cooks.splice(ci, 1); return { ok: true }; }
+      const c = st.cooks[ci];
+      if (c.task && c.task.type === 'choose' && now > c.task.start) log(st, { type: 'wait', id: 'wait', cook: ci, start: c.task.start }, now);
+      if (c.task && c.task.type === 'step') st.cooks.forEach((h, hi) => {
+        if (h.task && h.task.type === 'help' && h.task.of === c.task.id) { log(st, { ...h.task, cook: hi }, now); h.task = null; }
+      });
+      c.task = null; c.gone = true;
+      if (st.phase === 'cook') schedule(st, ctx, now);
       return { ok: true };
     }
     case 'toEquip': {
