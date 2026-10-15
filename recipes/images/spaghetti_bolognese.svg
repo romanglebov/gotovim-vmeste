@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+<rect width="240" height="180" fill="#5B4033"/>
+<g fill="#C7CCD0" transform="rotate(8 200 92)"><rect x="196" y="70" width="7" height="96" rx="3.5"/><rect x="190" y="22" width="19" height="52" rx="5"/><rect x="192" y="10" width="3" height="20" rx="1.5"/><rect x="197.5" y="10" width="3" height="20" rx="1.5"/><rect x="203" y="10" width="3" height="20" rx="1.5"/></g>
+<circle cx="98" cy="92" r="76" fill="#F2F1EC"/>
+<circle cx="98" cy="92" r="60" fill="none" stroke="#E0DED6" stroke-width="2"/>
+<g fill="none" stroke="#E5C062" stroke-width="3.2" stroke-linecap="round">
+<ellipse cx="98" cy="92" rx="48" ry="32"/><ellipse cx="96" cy="94" rx="42" ry="34" transform="rotate(35 96 94)"/>
+<ellipse cx="100" cy="90" rx="46" ry="28" transform="rotate(-30 100 90)"/><ellipse cx="98" cy="92" rx="38" ry="30" transform="rotate(70 98 92)"/>
+<ellipse cx="94" cy="96" rx="44" ry="24" transform="rotate(110 94 96)"/><ellipse cx="98" cy="92" rx="50" ry="20" transform="rotate(150 98 92)"/></g>
+<g fill="none" stroke="#D3AC4C" stroke-width="2.4"><ellipse cx="98" cy="92" rx="40" ry="26" transform="rotate(55 98 92)"/><ellipse cx="98" cy="92" rx="46" ry="30" transform="rotate(-70 98 92)"/></g>
+<path d="M98 58 C126 56 138 78 133 98 C128 120 104 128 84 120 C64 112 62 88 72 74 C79 64 88 59 98 58Z" fill="#A8361F"/>
+<path d="M98 66 C118 65 127 81 123 96 C119 111 101 117 87 111 C74 105 72 87 79 78 C84 71 90 67 98 66Z" fill="#B9442A"/>
+<g fill="#6E3420"><circle cx="88" cy="80" r="4"/><circle cx="104" cy="74" r="3.5"/><circle cx="116" cy="88" r="4"/><circle cx="96" cy="94" r="4.5"/><circle cx="110" cy="104" r="3.5"/><circle cx="84" cy="102" r="3.5"/><circle cx="98" cy="112" r="3"/><circle cx="122" cy="102" r="2.5"/><circle cx="78" cy="90" r="2.5"/></g>
+<g fill="#8A4428"><circle cx="94" cy="84" r="2.5"/><circle cx="110" cy="82" r="2.5"/><circle cx="104" cy="96" r="2.5"/><circle cx="90" cy="106" r="2"/><circle cx="116" cy="96" r="2"/><circle cx="100" cy="102" r="2"/></g>
+<g fill="#E07A3A"><rect x="100" y="86" width="4" height="3" rx="1"/><rect x="86" y="94" width="3" height="3" rx="1"/><rect x="112" y="96" width="3" height="3" rx="1"/><rect x="94" y="72" width="3" height="3" rx="1"/></g>
+</svg>
